@@ -8,6 +8,7 @@ import { useState } from "react";
 const navItems = [
   { label: "Dashboard", href: "/admin", icon: "📊" },
   { label: "Members", href: "/admin/members", icon: "👥" },
+  { label: "MLM Tree", href: "/admin/members/tree", icon: "🌳" },
   { label: "Sales", href: "/admin/sales", icon: "💰" },
   { label: "Incentives", href: "/admin/incentives", icon: "🎁" },
   { label: "Rank Engine", href: "/admin/ranks", icon: "🏆" },

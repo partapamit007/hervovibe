@@ -121,26 +121,23 @@ async function main() {
 
   // Sales data
   const salesData = [
-    { memberId: platinum1.id, enteredById: admin.id, amount: 2500000 },
-    { memberId: diamond1.id,  enteredById: admin.id, amount: 1100000 },
-    { memberId: diamond2.id,  enteredById: admin.id, amount: 1300000 },
-    { memberId: golden1.id,   enteredById: admin.id, amount: 225000 },
-    { memberId: golden2.id,   enteredById: admin.id, amount: 198000 },
-    { memberId: silver1.id,   enteredById: admin.id, amount: 140000 },
-    { memberId: silver2.id,   enteredById: admin.id, amount: 95000 },
-    { memberId: silver3.id,   enteredById: admin.id, amount: 72000 },
-    { memberId: bronze1.id,   enteredById: admin.id, amount: 45000 },
-    { memberId: bronze2.id,   enteredById: admin.id, amount: 38000 },
-    { memberId: dist1.id,     enteredById: admin.id, amount: 12000 },
+    { memberId: platinum1.id, enteredById: admin.id, amount: 28125000 }, // Platinum: ₹2,81,25,000
+    { memberId: diamond2.id,  enteredById: admin.id, amount: 5625000 },  // Super Diamond: ₹56,25,000
+    { memberId: diamond1.id,  enteredById: admin.id, amount: 1125000 },  // Diamond: ₹11,25,000
+    { memberId: golden1.id,   enteredById: admin.id, amount: 225000 },   // Golden: ₹2,25,000
+    { memberId: golden2.id,   enteredById: admin.id, amount: 225000 },   // Golden: ₹2,25,000
+    { memberId: silver1.id,   enteredById: admin.id, amount: 160000 },   // Silver-B: ₹1,60,000
+    { memberId: silver2.id,   enteredById: admin.id, amount: 90000 },    // Silver-A: ₹90,000
+    { memberId: silver3.id,   enteredById: admin.id, amount: 45000 },    // Silver: ₹45,000
+    { memberId: bronze1.id,   enteredById: admin.id, amount: 9000 },     // Bronze: ₹9,000
+    { memberId: bronze2.id,   enteredById: admin.id, amount: 9000 },     // Bronze: ₹9,000
+    { memberId: dist1.id,     enteredById: admin.id, amount: 1800 },     // Distributor: ₹1,800
   ];
 
+  // Clear existing demo sales and re-insert with correct amounts
+  await prisma.sale.deleteMany({ where: { month: 5, year: 2026 } });
   for (const s of salesData) {
-    const exists = await prisma.sale.findFirst({
-      where: { memberId: s.memberId, month: 5, year: 2026 },
-    });
-    if (!exists) {
-      await prisma.sale.create({ data: { ...s, month: 5, year: 2026 } });
-    }
+    await prisma.sale.create({ data: { ...s, month: 5, year: 2026 } });
   }
 
   console.log("✅ Seed complete: 1 admin + 2 team members + 12 distributors + 11 sales entries");

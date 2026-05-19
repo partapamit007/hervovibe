@@ -66,14 +66,23 @@ export default function MemberDetailPage() {
             </div>
           </div>
         </div>
-        <Button
-          onClick={toggleStatus}
-          variant="outline"
-          size="sm"
-          className={member.status === "ACTIVE" ? "text-red-600 border-red-200" : "text-green-600 border-green-200"}
-        >
-          {member.status === "ACTIVE" ? "Deactivate" : "Activate"}
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            onClick={() => router.push(`/admin/members/${id}/edit`)}
+            variant="outline"
+            size="sm"
+          >
+            Edit
+          </Button>
+          <Button
+            onClick={toggleStatus}
+            variant="outline"
+            size="sm"
+            className={member.status === "ACTIVE" ? "text-red-600 border-red-200" : "text-green-600 border-green-200"}
+          >
+            {member.status === "ACTIVE" ? "Deactivate" : "Activate"}
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4 mb-5">
