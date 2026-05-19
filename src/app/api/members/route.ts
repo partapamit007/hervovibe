@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { name, email, phone, sponsorId, managedBy } = body;
+  const { name, email, phone, sponsorId, managedBy, joiningDate } = body;
 
   const count = await prisma.user.count({ where: { role: "DISTRIBUTOR" } });
   const memberId = `HV-${String(count + 100).padStart(4, "0")}`;
@@ -57,6 +57,7 @@ export async function POST(req: NextRequest) {
       name, email, phone, memberId, password,
       role: "DISTRIBUTOR",
       rank: "DISTRIBUTOR",
+      joiningDate: joiningDate ? new Date(joiningDate) : new Date(),
       ...(sponsorId && { sponsorId }),
       ...(managedBy && { managedBy }),
     },

@@ -106,7 +106,15 @@ export default function MemberDetailPage() {
         </Card>
         <Card>
           <CardContent className="p-4">
-            <p className="text-xs text-gray-500">Total Sales</p>
+            <p className="text-xs text-gray-500">Date Started</p>
+            <p className="text-sm font-medium text-gray-800">
+              {new Date(member.joiningDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="col-span-2">
+          <CardContent className="p-4">
+            <p className="text-xs text-gray-500">Total Sales (This Month)</p>
             <p className="text-sm font-bold text-green-600">₹{totalSales.toLocaleString("en-IN")}</p>
           </CardContent>
         </Card>
