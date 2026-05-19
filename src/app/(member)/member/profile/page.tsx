@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Mail, Phone, Calendar, User, Hash, Shield } from "lucide-react";
+import ChangePasswordForm from "@/components/member/ChangePasswordForm";
 
 const rankColors: Record<string, string> = {
   DISTRIBUTOR:   "bg-gray-100 text-gray-700",
@@ -151,6 +152,8 @@ export default async function ProfilePage() {
           })}
         </CardContent>
       </Card>
+
+      <ChangePasswordForm />
     </div>
   );
 }
