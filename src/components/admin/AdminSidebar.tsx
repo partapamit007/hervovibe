@@ -49,6 +49,15 @@ export default function AdminSidebar() {
         })}
       </nav>
 
+      <Link
+        href="/admin/settings"
+        className={`flex items-center gap-3 px-4 py-3 text-sm border-t border-green-700 transition-colors ${
+          pathname === "/admin/settings" ? "bg-green-600 text-white" : "text-green-100 hover:bg-green-700"
+        }`}
+      >
+        <span>⚙️</span>
+        {!collapsed && <span>Settings</span>}
+      </Link>
       <button
         onClick={() => signOut({ callbackUrl: "/login" })}
         className="flex items-center gap-3 px-4 py-3 text-sm text-green-100 hover:bg-green-700 border-t border-green-700"
