@@ -1,10 +1,16 @@
+import { auth } from "@/lib/auth";
 import TeamSidebar from "@/components/team/TeamSidebar";
 
-export default function TeamLayout({ children }: { children: React.ReactNode }) {
+export default async function TeamLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const session = await auth();
   return (
     <div className="flex h-screen bg-gray-50">
-      <TeamSidebar />
-      <main className="flex-1 overflow-y-auto p-6">{children}</main>
+      <TeamSidebar user={session?.user} />
+      <main className="flex-1 overflow-y-auto p-6 lg:p-8">{children}</main>
     </div>
   );
 }

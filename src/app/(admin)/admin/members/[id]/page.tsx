@@ -5,18 +5,19 @@ import { useParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ArrowLeft, KeyRound, CheckCircle, XCircle } from "lucide-react";
 
 const rankColors: Record<string, string> = {
-  DISTRIBUTOR: "bg-gray-100 text-gray-700",
-  BRONZE: "bg-amber-100 text-amber-700",
-  SILVER: "bg-slate-100 text-slate-700",
-  SILVER_A: "bg-slate-200 text-slate-800",
-  SILVER_B: "bg-slate-300 text-slate-900",
-  GOLDEN: "bg-yellow-100 text-yellow-700",
-  DIAMOND: "bg-blue-100 text-blue-700",
+  DISTRIBUTOR:   "bg-gray-100 text-gray-700",
+  BRONZE:        "bg-amber-100 text-amber-700",
+  SILVER:        "bg-slate-100 text-slate-600",
+  SILVER_A:      "bg-slate-200 text-slate-700",
+  SILVER_B:      "bg-slate-300 text-slate-800",
+  GOLDEN:        "bg-yellow-100 text-yellow-700",
+  DIAMOND:       "bg-blue-100 text-blue-700",
   SUPER_DIAMOND: "bg-blue-200 text-blue-800",
-  PLATINUM: "bg-purple-100 text-purple-700",
-  CENTENNIAL: "bg-green-100 text-green-700",
+  PLATINUM:      "bg-purple-100 text-purple-700",
+  CENTENNIAL:    "bg-green-100 text-green-700",
 };
 
 export default function MemberDetailPage() {
@@ -24,9 +25,16 @@ export default function MemberDetailPage() {
   const router = useRouter();
   const [member, setMember] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [resetStatus, setResetStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [resetMsg, setResetMsg] = useState("");
 
   useEffect(() => {
-    fetch(`/api/members/${id}`).then(r => r.json()).then(d => { setMember(d); setLoading(false); });
+    fetch(`/api/members/${id}`)
+      .then((r) => r.json())
+      .then((d) => {
+        setMember(d);
+        setLoading(false);
+      });
   }, [id]);
 
   async function toggleStatus() {
@@ -39,34 +47,93 @@ export default function MemberDetailPage() {
     setMember({ ...member, status: newStatus });
   }
 
-  if (loading) return <div className="text-center py-12 text-gray-400">Loading...</div>;
-  if (!member) return <div className="text-center py-12 text-gray-400">Member not found</div>;
+  async function handleResetPassword() {
+    if (
+      !confirm(
+        `Reset password for ${member.name}? Their new password will be Member@123`
+      )
+    )
+      return;
+    setResetStatus("loading");
+    try {
+      const res = await fetch(`/api/members/${id}/reset-password`, {
+        method: "POST",
+      });
+      if (res.ok) {
+        setResetStatus("success");
+        setResetMsg("Password reset to Member@123 successfully.");
+      } else {
+        setResetStatus("error");
+        setResetMsg("Failed to reset password. Please try again.");
+      }
+    } catch {
+      setResetStatus("error");
+      setResetMsg("Network error. Please try again.");
+    }
+    setTimeout(() => setResetStatus("idle"), 4000);
+  }
 
-  const totalSales = member.salesEntries?.reduce((s: number, e: any) => s + e.amount, 0) || 0;
+  if (loading)
+    return (
+      <div className="text-center py-12 text-gray-400">Loading...</div>
+    );
+  if (!member)
+    return (
+      <div className="text-center py-12 text-gray-400">Member not found</div>
+    );
+
+  const totalSales =
+    member.salesEntries?.reduce((s: number, e: any) => s + e.amount, 0) || 0;
 
   return (
     <div className="max-w-2xl">
-      <div className="flex items-center gap-3 mb-6">
-        <button onClick={() => router.back()} className="text-gray-400 hover:text-gray-600 text-sm">← Back</button>
-      </div>
+      <button
+        onClick={() => router.back()}
+        className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-600 mb-5"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        Back
+      </button>
+
+      {/* Reset password feedback */}
+      {resetStatus === "success" && (
+        <div className="flex items-center gap-2 bg-green-50 border border-green-200 text-green-700 text-sm rounded-lg px-4 py-3 mb-4">
+          <CheckCircle className="w-4 h-4 shrink-0" />
+          {resetMsg}
+        </div>
+      )}
+      {resetStatus === "error" && (
+        <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3 mb-4">
+          <XCircle className="w-4 h-4 shrink-0" />
+          {resetMsg}
+        </div>
+      )}
 
       <div className="flex items-start justify-between mb-6">
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-full bg-green-600 flex items-center justify-center text-white font-bold text-2xl">
+          <div className="w-16 h-16 rounded-full bg-green-600 flex items-center justify-center text-white font-bold text-2xl shrink-0">
             {member.name.charAt(0).toUpperCase()}
           </div>
           <div>
-            <h1 className="text-xl font-bold text-gray-800">{member.name}</h1>
+            <h1 className="text-xl font-bold text-gray-900">{member.name}</h1>
             <p className="text-gray-500 text-sm">{member.memberId}</p>
             <div className="flex gap-2 mt-1">
-              <Badge className={`text-xs ${rankColors[member.rank]}`}>{member.rank.replace("_", " ")}</Badge>
-              <Badge className={`text-xs ${member.status === "ACTIVE" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+              <Badge className={`text-xs ${rankColors[member.rank]}`}>
+                {member.rank.replace(/_/g, " ")}
+              </Badge>
+              <Badge
+                className={`text-xs ${
+                  member.status === "ACTIVE"
+                    ? "bg-green-100 text-green-700"
+                    : "bg-red-100 text-red-700"
+                }`}
+              >
                 {member.status}
               </Badge>
             </div>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2 justify-end">
           <Button
             onClick={() => router.push(`/admin/members/${id}/edit`)}
             variant="outline"
@@ -78,9 +145,23 @@ export default function MemberDetailPage() {
             onClick={toggleStatus}
             variant="outline"
             size="sm"
-            className={member.status === "ACTIVE" ? "text-red-600 border-red-200" : "text-green-600 border-green-200"}
+            className={
+              member.status === "ACTIVE"
+                ? "text-red-600 border-red-200 hover:bg-red-50"
+                : "text-green-600 border-green-200 hover:bg-green-50"
+            }
           >
             {member.status === "ACTIVE" ? "Deactivate" : "Activate"}
+          </Button>
+          <Button
+            onClick={handleResetPassword}
+            variant="outline"
+            size="sm"
+            disabled={resetStatus === "loading"}
+            className="text-amber-600 border-amber-200 hover:bg-amber-50 flex items-center gap-1.5"
+          >
+            <KeyRound className="w-3.5 h-3.5" />
+            {resetStatus === "loading" ? "Resetting..." : "Reset Password"}
           </Button>
         </div>
       </div>
@@ -89,33 +170,45 @@ export default function MemberDetailPage() {
         <Card>
           <CardContent className="p-4">
             <p className="text-xs text-gray-500">Email</p>
-            <p className="text-sm font-medium text-gray-800 truncate">{member.email}</p>
+            <p className="text-sm font-medium text-gray-800 truncate">
+              {member.email}
+            </p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <p className="text-xs text-gray-500">Phone</p>
-            <p className="text-sm font-medium text-gray-800">{member.phone || "—"}</p>
+            <p className="text-sm font-medium text-gray-800">
+              {member.phone || "—"}
+            </p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <p className="text-xs text-gray-500">Sponsor</p>
-            <p className="text-sm font-medium text-gray-800">{member.sponsor?.name || "—"}</p>
+            <p className="text-sm font-medium text-gray-800">
+              {member.sponsor?.name || "—"}
+            </p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <p className="text-xs text-gray-500">Date Started</p>
             <p className="text-sm font-medium text-gray-800">
-              {new Date(member.joiningDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+              {new Date(member.joiningDate).toLocaleDateString("en-IN", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+              })}
             </p>
           </CardContent>
         </Card>
         <Card className="col-span-2">
           <CardContent className="p-4">
-            <p className="text-xs text-gray-500">Total Sales (This Month)</p>
-            <p className="text-sm font-bold text-green-600">₹{totalSales.toLocaleString("en-IN")}</p>
+            <p className="text-xs text-gray-500">Total Sales (All Time)</p>
+            <p className="text-sm font-bold text-green-600">
+              ₹{totalSales.toLocaleString("en-IN")}
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -123,32 +216,53 @@ export default function MemberDetailPage() {
       <Card className="mb-5">
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="text-sm">Direct Downline ({member.downline?.length || 0} members)</CardTitle>
-            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${member.downline?.length >= 5 ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
-              {member.downline?.length >= 5 ? "Min. met ✓" : `${5 - (member.downline?.length || 0)} more for min`}
+            <CardTitle className="text-sm">
+              Direct Downline ({member.downline?.length || 0} members)
+            </CardTitle>
+            <span
+              className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                member.downline?.length >= 5
+                  ? "bg-green-100 text-green-700"
+                  : "bg-amber-100 text-amber-700"
+              }`}
+            >
+              {member.downline?.length >= 5
+                ? "Min. met"
+                : `${5 - (member.downline?.length || 0)} more for min`}
             </span>
           </div>
           <div className="flex gap-1 mt-2">
-            {[0,1,2,3,4].map(i => (
-              <div key={i} className={`h-2 flex-1 rounded-full ${i < (member.downline?.length || 0) ? "bg-green-500" : "bg-gray-200"}`} />
+            {[0, 1, 2, 3, 4].map((i) => (
+              <div
+                key={i}
+                className={`h-2 flex-1 rounded-full ${
+                  i < (member.downline?.length || 0)
+                    ? "bg-green-500"
+                    : "bg-gray-200"
+                }`}
+              />
             ))}
-            {(member.downline?.length || 0) > 5 && (
-              <div className="h-2 flex-1 rounded-full bg-blue-400" title="Extra members beyond minimum" />
-            )}
           </div>
         </CardHeader>
         <CardContent>
           {member.downline?.length === 0 ? (
-            <p className="text-gray-400 text-sm text-center py-4">No downline members</p>
+            <p className="text-gray-400 text-sm text-center py-4">
+              No downline members
+            </p>
           ) : (
             <div className="space-y-2">
               {member.downline?.map((d: any) => (
-                <div key={d.id} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+                <div
+                  key={d.id}
+                  className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0"
+                >
                   <div>
                     <p className="text-sm font-medium text-gray-800">{d.name}</p>
                     <p className="text-xs text-gray-500">{d.memberId}</p>
                   </div>
-                  <Badge className={`text-xs ${rankColors[d.rank]}`}>{d.rank.replace("_", " ")}</Badge>
+                  <Badge className={`text-xs ${rankColors[d.rank]}`}>
+                    {d.rank.replace(/_/g, " ")}
+                  </Badge>
                 </div>
               ))}
             </div>
@@ -162,13 +276,22 @@ export default function MemberDetailPage() {
         </CardHeader>
         <CardContent>
           {member.salesEntries?.length === 0 ? (
-            <p className="text-gray-400 text-sm text-center py-4">No sales yet</p>
+            <p className="text-gray-400 text-sm text-center py-4">
+              No sales yet
+            </p>
           ) : (
             <div className="space-y-2">
               {member.salesEntries?.map((s: any) => (
-                <div key={s.id} className="flex justify-between py-2 border-b border-gray-100 last:border-0">
-                  <span className="text-sm text-gray-600">{s.month}/{s.year}</span>
-                  <span className="text-sm font-medium text-green-600">₹{s.amount.toLocaleString("en-IN")}</span>
+                <div
+                  key={s.id}
+                  className="flex justify-between py-2 border-b border-gray-100 last:border-0"
+                >
+                  <span className="text-sm text-gray-600">
+                    {s.month}/{s.year}
+                  </span>
+                  <span className="text-sm font-medium text-green-600">
+                    ₹{s.amount.toLocaleString("en-IN")}
+                  </span>
                 </div>
               ))}
             </div>
