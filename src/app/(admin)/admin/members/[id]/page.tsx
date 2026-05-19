@@ -122,7 +122,17 @@ export default function MemberDetailPage() {
 
       <Card className="mb-5">
         <CardHeader>
-          <CardTitle className="text-sm">Downline ({member.downline?.length || 0})</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm">Direct Downline ({member.downline?.length || 0}/5 slots)</CardTitle>
+            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${member.downline?.length >= 5 ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
+              {member.downline?.length >= 5 ? "Full" : `${5 - (member.downline?.length || 0)} slots open`}
+            </span>
+          </div>
+          <div className="flex gap-1 mt-2">
+            {[0,1,2,3,4].map(i => (
+              <div key={i} className={`h-2 flex-1 rounded-full ${i < (member.downline?.length || 0) ? "bg-green-500" : "bg-gray-200"}`} />
+            ))}
+          </div>
         </CardHeader>
         <CardContent>
           {member.downline?.length === 0 ? (

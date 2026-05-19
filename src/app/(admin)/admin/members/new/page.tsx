@@ -105,10 +105,17 @@ export default function AddMemberPage() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
               >
                 <option value="">— No sponsor —</option>
-                {sponsors.map((s: any) => (
-                  <option key={s.id} value={s.id}>{s.name} ({s.memberId})</option>
-                ))}
+                {sponsors.map((s: any) => {
+                  const filled = s._count?.downline || 0;
+                  const full = filled >= 5;
+                  return (
+                    <option key={s.id} value={s.id} disabled={full}>
+                      {s.name} ({s.memberId}) — {filled}/5 slots{full ? " FULL" : ""}
+                    </option>
+                  );
+                })}
               </select>
+              <p className="text-xs text-gray-400 mt-1">Each member can have maximum 5 direct downlines</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Assigned Team Member</label>

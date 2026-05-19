@@ -119,6 +119,66 @@ async function main() {
     sponsorId: bronze2.id, managedBy: tm2.id, joiningDate: new Date("2024-11-15"),
   });
 
+  // More downlines for Vikram (Platinum) — needs 5 direct
+  const diamond3 = await createUser({
+    name: "Sanjay Mehta", email: "sanjay.m@hervovibe.in",
+    password: await hash("Member@123"),
+    role: "DISTRIBUTOR", rank: "DIAMOND", memberId: "HV-0022", phone: "9876502022",
+    sponsorId: platinum1.id, managedBy: tm1.id, joiningDate: new Date("2024-03-15"),
+  });
+  const diamond4 = await createUser({
+    name: "Geeta Sharma", email: "geeta.sh@hervovibe.in",
+    password: await hash("Member@123"),
+    role: "DISTRIBUTOR", rank: "GOLDEN", memberId: "HV-0023", phone: "9876502023",
+    sponsorId: platinum1.id, managedBy: tm2.id, joiningDate: new Date("2024-04-01"),
+  });
+  const diamond5 = await createUser({
+    name: "Pankaj Yadav", email: "pankaj.y@hervovibe.in",
+    password: await hash("Member@123"),
+    role: "DISTRIBUTOR", rank: "SILVER_B", memberId: "HV-0024", phone: "9876502024",
+    sponsorId: platinum1.id, managedBy: tm1.id, joiningDate: new Date("2024-05-01"),
+  });
+
+  // More downlines for diamond1 — needs 5 direct
+  const g3 = await createUser({
+    name: "Asha Kumari", email: "asha.k@hervovibe.in",
+    password: await hash("Member@123"),
+    role: "DISTRIBUTOR", rank: "SILVER_A", memberId: "HV-0032", phone: "9876503032",
+    sponsorId: diamond1.id, managedBy: tm1.id, joiningDate: new Date("2024-06-10"),
+  });
+  const g4 = await createUser({
+    name: "Vijay Singh", email: "vijay.si@hervovibe.in",
+    password: await hash("Member@123"),
+    role: "DISTRIBUTOR", rank: "SILVER", memberId: "HV-0033", phone: "9876503033",
+    sponsorId: diamond1.id, managedBy: tm2.id, joiningDate: new Date("2024-07-01"),
+  });
+  const g5 = await createUser({
+    name: "Nirmala Devi", email: "nirmala.d@hervovibe.in",
+    password: await hash("Member@123"),
+    role: "DISTRIBUTOR", rank: "BRONZE", memberId: "HV-0034", phone: "9876503034",
+    sponsorId: diamond1.id, managedBy: tm1.id, joiningDate: new Date("2024-08-01"),
+  });
+
+  // More downlines for golden1 — needs 5 direct
+  const b3 = await createUser({
+    name: "Ramesh Gupta", email: "ramesh.g@hervovibe.in",
+    password: await hash("Member@123"),
+    role: "DISTRIBUTOR", rank: "BRONZE", memberId: "HV-0052", phone: "9876505052",
+    sponsorId: golden1.id, managedBy: tm1.id, joiningDate: new Date("2024-09-05"),
+  });
+  const b4 = await createUser({
+    name: "Seema Jain", email: "seema.j@hervovibe.in",
+    password: await hash("Member@123"),
+    role: "DISTRIBUTOR", rank: "DISTRIBUTOR", memberId: "HV-0053", phone: "9876505053",
+    sponsorId: golden1.id, managedBy: tm2.id, joiningDate: new Date("2024-10-01"),
+  });
+  const b5 = await createUser({
+    name: "Tarun Bose", email: "tarun.b@hervovibe.in",
+    password: await hash("Member@123"),
+    role: "DISTRIBUTOR", rank: "DISTRIBUTOR", memberId: "HV-0054", phone: "9876505054",
+    sponsorId: golden1.id, managedBy: tm1.id, joiningDate: new Date("2024-11-01"),
+  });
+
   // Sales data
   const salesData = [
     { memberId: platinum1.id, enteredById: admin.id, amount: 28125000 }, // Platinum: ₹2,81,25,000
