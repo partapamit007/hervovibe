@@ -1,0 +1,117 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  MASTER_ADMIN
+  TEAM_MEMBER
+  DISTRIBUTOR
+}
+
+enum Rank {
+  DISTRIBUTOR
+  BRONZE
+  SILVER
+  SILVER_A
+  SILVER_B
+  GOLDEN
+  DIAMOND
+  SUPER_DIAMOND
+  PLATINUM
+  CENTENNIAL
+}
+
+enum MemberStatus {
+  ACTIVE
+  INACTIVE
+  CANCELLED
+}
+
+model User {
+  id          String       @id @default(cuid())
+  name        String
+  email       String       @unique
+  phone       String?      @unique
+  password    String
+  role        Role         @default(DISTRIBUTOR)
+  memberId    String?      @unique
+  rank        Rank         @default(DISTRIBUTOR)
+  status      MemberStatus @default(ACTIVE)
+  joiningDate DateTime     @default(now())
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  sponsorId    String?
+  sponsor      User?  @relation("MLMTree", fields: [sponsorId], references: [id])
+  downline     User[] @relation("MLMTree")
+
+  managedBy    String?
+  manager      User?  @relation("TeamManagement", fields: [managedBy], references: [id])
+  managedUsers User[] @relation("TeamManagement")
+
+  salesEntries Sale[]    @relation("MemberSales")
+  enteredSales Sale[]    @relation("EnteredBySales")
+  piEntries    PIEntry[]
+  biEntries    BIEntry[]
+
+  @@map("users")
+}
+
+model Sale {
+  id          String   @id @default(cuid())
+  memberId    String
+  member      User     @relation("MemberSales", fields: [memberId], references: [id])
+  enteredById String
+  enteredBy   User     @relation("EnteredBySales", fields: [enteredById], references: [id])
+  amount      Float
+  month       Int
+  year        Int
+  invoiceUrl  String?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("sales")
+}
+
+model PIEntry {
+  id        String   @id @default(cuid())
+  memberId  String
+  member    User     @relation(fields: [memberId], references: [id])
+  amount    Float
+  month     Int
+  year      Int
+  notes     String?
+  createdAt DateTime @default(now())
+
+  @@map("pi_entries")
+}
+
+model BIEntry {
+  id        String   @id @default(cuid())
+  memberId  String
+  member    User     @relation(fields: [memberId], references: [id])
+  amount    Float
+  period    String
+  notes     String?
+  createdAt DateTime @default(now())
+
+  @@map("bi_entries")
+}
+
+model RankHistory {
+  id        String   @id @default(cuid())
+  memberId  String
+  oldRank   Rank
+  newRank   Rank
+  month     Int
+  year      Int
+  reason    String?
+  createdAt DateTime @default(now())
+
+  @@map("rank_history")
+}
