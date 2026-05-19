@@ -5,8 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
-const ranks = ["DISTRIBUTOR","BRONZE","SILVER","SILVER_A","SILVER_B","GOLDEN","DIAMOND","SUPER_DIAMOND","PLATINUM","CENTENNIAL"];
-const statuses = ["ACTIVE","INACTIVE","CANCELLED"];
+const ranks = ["DISTRIBUTOR","BRONZE","SILVER","const statuses = ["ACTIVE","INACTIVE","CANCELLED"];
 
 export default function EditMemberPage() {
   const { id } = useParams();

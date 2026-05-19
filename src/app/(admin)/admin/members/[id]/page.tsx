@@ -11,8 +11,6 @@ const rankColors: Record<string, string> = {
   DISTRIBUTOR:   "bg-gray-100 text-gray-700",
   BRONZE:        "bg-amber-100 text-amber-700",
   SILVER:        "bg-slate-100 text-slate-600",
-  SILVER_A:      "bg-slate-200 text-slate-700",
-  SILVER_B:      "bg-slate-300 text-slate-800",
   GOLDEN:        "bg-yellow-100 text-yellow-700",
   DIAMOND:       "bg-blue-100 text-blue-700",
   SUPER_DIAMOND: "bg-blue-200 text-blue-800",

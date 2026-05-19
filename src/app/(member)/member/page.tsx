@@ -7,8 +7,6 @@ const rankTargets: Record<string, number> = {
   DISTRIBUTOR:   1800,
   BRONZE:        9000,
   SILVER:        45000,
-  SILVER_A:      90000,
-  SILVER_B:      160000,
   GOLDEN:        225000,
   DIAMOND:       1125000,
   SUPER_DIAMOND: 5625000,

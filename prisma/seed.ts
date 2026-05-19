@@ -32,7 +32,7 @@ async function main() {
   const tm2 = await createUser({
     name: "Priya Singh", email: "priya.team@hervovibe.in",
     password: await hash("Team@123"),
-    role: "TEAM_MEMBER", rank: "SILVER_A", memberId: "HV-TM02", phone: "9876500002",
+    role: "TEAM_MEMBER", rank: "SILVER", memberId: "HV-TM02", phone: "9876500002",
   });
 
   const platinum1 = await createUser({
@@ -73,14 +73,14 @@ async function main() {
   const silver1 = await createUser({
     name: "Kavita Rani", email: "kavita.r@hervovibe.in",
     password: await hash("Member@123"),
-    role: "DISTRIBUTOR", rank: "SILVER_B", memberId: "HV-0040", phone: "9876504040",
+    role: "DISTRIBUTOR", rank: "SILVER", memberId: "HV-0040", phone: "9876504040",
     sponsorId: golden1.id, managedBy: tm1.id, joiningDate: new Date("2024-06-01"),
   });
 
   const silver2 = await createUser({
     name: "Deepak Verma", email: "deepak.v@hervovibe.in",
     password: await hash("Member@123"),
-    role: "DISTRIBUTOR", rank: "SILVER_A", memberId: "HV-0041", phone: "9876504041",
+    role: "DISTRIBUTOR", rank: "SILVER", memberId: "HV-0041", phone: "9876504041",
     sponsorId: golden2.id, managedBy: tm2.id, joiningDate: new Date("2024-07-15"),
   });
 
@@ -135,7 +135,7 @@ async function main() {
   const diamond5 = await createUser({
     name: "Pankaj Yadav", email: "pankaj.y@hervovibe.in",
     password: await hash("Member@123"),
-    role: "DISTRIBUTOR", rank: "SILVER_B", memberId: "HV-0024", phone: "9876502024",
+    role: "DISTRIBUTOR", rank: "SILVER", memberId: "HV-0024", phone: "9876502024",
     sponsorId: platinum1.id, managedBy: tm1.id, joiningDate: new Date("2024-05-01"),
   });
 
@@ -143,7 +143,7 @@ async function main() {
   const g3 = await createUser({
     name: "Asha Kumari", email: "asha.k@hervovibe.in",
     password: await hash("Member@123"),
-    role: "DISTRIBUTOR", rank: "SILVER_A", memberId: "HV-0032", phone: "9876503032",
+    role: "DISTRIBUTOR", rank: "SILVER", memberId: "HV-0032", phone: "9876503032",
     sponsorId: diamond1.id, managedBy: tm1.id, joiningDate: new Date("2024-06-10"),
   });
   const g4 = await createUser({
@@ -186,8 +186,8 @@ async function main() {
     { memberId: diamond1.id,  enteredById: admin.id, amount: 1125000 },  // Diamond: ₹11,25,000
     { memberId: golden1.id,   enteredById: admin.id, amount: 225000 },   // Golden: ₹2,25,000
     { memberId: golden2.id,   enteredById: admin.id, amount: 225000 },   // Golden: ₹2,25,000
-    { memberId: silver1.id,   enteredById: admin.id, amount: 160000 },   // Silver-B: ₹1,60,000
-    { memberId: silver2.id,   enteredById: admin.id, amount: 90000 },    // Silver-A: ₹90,000
+    { memberId: silver1.id,   enteredById: admin.id, amount: 45000 },    // Silver: ₹45,000
+    { memberId: silver2.id,   enteredById: admin.id, amount: 45000 },    // Silver: ₹45,000
     { memberId: silver3.id,   enteredById: admin.id, amount: 45000 },    // Silver: ₹45,000
     { memberId: bronze1.id,   enteredById: admin.id, amount: 9000 },     // Bronze: ₹9,000
     { memberId: bronze2.id,   enteredById: admin.id, amount: 9000 },     // Bronze: ₹9,000

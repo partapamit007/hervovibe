@@ -8,8 +8,6 @@ const rankTargets: Record<string, number> = {
   DISTRIBUTOR:   1800,
   BRONZE:        9000,
   SILVER:        45000,
-  SILVER_A:      90000,
-  SILVER_B:      160000,
   GOLDEN:        225000,
   DIAMOND:       1125000,
   SUPER_DIAMOND: 5625000,
@@ -18,16 +16,13 @@ const rankTargets: Record<string, number> = {
 };
 
 const rankOrder = [
-  "DISTRIBUTOR","BRONZE","SILVER","SILVER_A","SILVER_B",
-  "GOLDEN","DIAMOND","SUPER_DIAMOND","PLATINUM","CENTENNIAL",
+  "DISTRIBUTOR","BRONZE","SILVER","  "GOLDEN","DIAMOND","SUPER_DIAMOND","PLATINUM","CENTENNIAL",
 ];
 
 const rankColors: Record<string, string> = {
   DISTRIBUTOR:   "bg-gray-100 text-gray-700",
   BRONZE:        "bg-amber-100 text-amber-700",
   SILVER:        "bg-slate-100 text-slate-600",
-  SILVER_A:      "bg-slate-200 text-slate-700",
-  SILVER_B:      "bg-slate-300 text-slate-800",
   GOLDEN:        "bg-yellow-100 text-yellow-700",
   DIAMOND:       "bg-blue-100 text-blue-700",
   SUPER_DIAMOND: "bg-blue-200 text-blue-800",
@@ -39,8 +34,6 @@ const rankHeroColors: Record<string, string> = {
   DISTRIBUTOR:   "bg-gray-500",
   BRONZE:        "bg-amber-500",
   SILVER:        "bg-slate-400",
-  SILVER_A:      "bg-slate-500",
-  SILVER_B:      "bg-slate-600",
   GOLDEN:        "bg-yellow-500",
   DIAMOND:       "bg-blue-500",
   SUPER_DIAMOND: "bg-blue-700",
