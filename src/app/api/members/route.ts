@@ -48,17 +48,6 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const { name, email, phone, sponsorId, managedBy, joiningDate } = body;
 
-  // Enforce max 5 direct downlines per sponsor
-  if (sponsorId) {
-    const directCount = await prisma.user.count({ where: { sponsorId } });
-    if (directCount >= 5) {
-      return NextResponse.json(
-        { error: "This sponsor already has 5 direct members. MLM allows maximum 5 per member." },
-        { status: 400 }
-      );
-    }
-  }
-
   const count = await prisma.user.count({ where: { role: "DISTRIBUTOR" } });
   const memberId = `HV-${String(count + 100).padStart(4, "0")}`;
   const password = await bcrypt.hash("Member@123", 10);

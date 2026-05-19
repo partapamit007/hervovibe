@@ -104,8 +104,8 @@ export default function MembersPage() {
                     <div className="flex flex-col items-end gap-1.5">
                       <Badge className={`text-xs ${rankColors[m.rank]}`}>{m.rank.replace("_", " ")}</Badge>
                       <Badge className={`text-xs ${statusColors[m.status]}`}>{m.status}</Badge>
-                      <span className={`text-xs font-medium ${m._count.downline >= 5 ? "text-red-500" : m._count.downline > 0 ? "text-amber-600" : "text-gray-400"}`}>
-                        {m._count.downline}/5 slots
+                      <span className={`text-xs font-medium ${m._count.downline >= 5 ? "text-green-600" : m._count.downline > 0 ? "text-amber-600" : "text-gray-400"}`}>
+                        {m._count.downline >= 5 ? `✓ ${m._count.downline} members` : `${m._count.downline}/5 min`}
                       </span>
                     </div>
                   </div>

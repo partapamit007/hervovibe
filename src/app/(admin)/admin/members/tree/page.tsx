@@ -47,10 +47,13 @@ function TreeNode({ node, depth = 0 }: { node: any; depth?: number }) {
             {node.status !== "ACTIVE" && (
               <Badge className="text-xs bg-red-100 text-red-600">INACTIVE</Badge>
             )}
-            <div className="flex gap-0.5" title={`${node.children?.length || 0}/5 direct slots`}>
+            <div className="flex gap-0.5" title={`${node.children?.length || 0} direct members (min 5 required)`}>
               {[0,1,2,3,4].map(i => (
                 <div key={i} className={`w-2 h-2 rounded-full border ${i < (node.children?.length || 0) ? "bg-current border-current opacity-70" : "border-current opacity-25"}`} />
               ))}
+              {(node.children?.length || 0) > 5 && (
+                <div className="w-2 h-2 rounded-full bg-blue-400 border border-blue-400" title="Extra beyond 5 minimum" />
+              )}
             </div>
           </div>
           <Link

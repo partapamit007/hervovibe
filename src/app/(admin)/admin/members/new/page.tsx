@@ -107,15 +107,15 @@ export default function AddMemberPage() {
                 <option value="">— No sponsor —</option>
                 {sponsors.map((s: any) => {
                   const filled = s._count?.downline || 0;
-                  const full = filled >= 5;
+                  const label = filled >= 5 ? `✓ ${filled} members` : `${filled}/5 min`;
                   return (
-                    <option key={s.id} value={s.id} disabled={full}>
-                      {s.name} ({s.memberId}) — {filled}/5 slots{full ? " FULL" : ""}
+                    <option key={s.id} value={s.id}>
+                      {s.name} ({s.memberId}) — {label}
                     </option>
                   );
                 })}
               </select>
-              <p className="text-xs text-gray-400 mt-1">Each member can have maximum 5 direct downlines</p>
+              <p className="text-xs text-gray-400 mt-1">Minimum 5 direct members required for rank qualification</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Assigned Team Member</label>
