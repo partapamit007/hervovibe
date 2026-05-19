@@ -16,7 +16,7 @@ const rankTargets: Record<string, number> = {
 };
 
 const rankOrder = [
-  "DISTRIBUTOR","BRONZE","SILVER","  "GOLDEN","DIAMOND","SUPER_DIAMOND","PLATINUM","CENTENNIAL",
+  "DISTRIBUTOR","BRONZE","SILVER","GOLDEN","DIAMOND","SUPER_DIAMOND","PLATINUM","CENTENNIAL",
 ];
 
 const rankColors: Record<string, string> = {
