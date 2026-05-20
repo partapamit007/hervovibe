@@ -8,199 +8,223 @@ dotenv.config();
 const adapter = new PrismaPg({ connectionString: process.env.DIRECT_URL! });
 const prisma = new PrismaClient({ adapter });
 
-async function createUser(data: any) {
-  const existing = await prisma.user.findUnique({ where: { email: data.email } });
-  if (existing) return existing;
-  return prisma.user.create({ data });
+const MEMBER_PASS = "Member@123";
+const NOW   = new Date();
+const MONTH = NOW.getMonth() + 1;
+const YEAR  = NOW.getFullYear();
+
+// ── Name pool (170+ unique members) ──────────────────────────────
+const FIRST = [
+  "Rajan","Sunita","Priya","Amit","Meena","Kavita","Deepak","Sanjay","Geeta","Neha",
+  "Vikram","Ankit","Suresh","Nirmala","Vijay","Ramesh","Seema","Tarun","Asha","Pankaj",
+  "Mohan","Kiran","Ravi","Anita","Sunil","Lata","Arun","Shanti","Manoj","Usha",
+  "Dinesh","Sarla","Mukesh","Radha","Vinod","Mala","Naresh","Pushpa","Kishore","Savita",
+  "Bharat","Laxmi","Hemant","Prakash","Chandra","Uma","Rajesh","Nita","Sushil","Rekha",
+  "Ashok","Sheela","Prem","Vimla","Girish","Nisha","Harish","Madhu","Rakesh","Komal",
+  "Yogesh","Sundar","Devika","Ajay","Preeti","Sachin","Babita","Rohit","Aarti","Vishal",
+  "Pooja","Sandeep","Rita","Ritesh","Kamla","Rajni","Lalit","Sonal","Paresh","Hema",
+  "Nilesh","Manjula","Satish","Bimla","Navin","Shalini","Ganesh","Sudha","Mahesh","Tara",
+  "Hitesh","Sapna","Raksha","Devendra","Suneel","Archana","Tushar","Neeraj","Vandana","Sanjana",
+  "Ashwini","Gaurav","Swati","Umesh","Jaya","Dhruv","Reena","Pramod","Smita","Yash",
+  "Kamal","Divya","Alka","Hemraj","Manisha","Vikas","Shefali","Ajit","Nandita","Balram",
+  "Rashmi","Naveen","Shruti","Milind","Varsha","Shyam","Renu","Praveen","Dilip","Saroj",
+];
+const LAST = [
+  "Kumar","Singh","Sharma","Verma","Gupta","Patel","Yadav","Pandey","Tiwari","Joshi",
+  "Mishra","Mehta","Jain","Bose","Rao","Shah","Sinha","Das","Choudhary","Dubey",
+  "Tripathi","Saxena","Awasthi","Bajpai","Srivastava","Thakur","Garg","Nair","Iyer","Chauhan",
+];
+
+let _nameIdx = 0;
+let _memberNum = 2000;
+
+function nextName(): string {
+  const first = FIRST[_nameIdx % FIRST.length];
+  const last  = LAST[Math.floor(_nameIdx / FIRST.length) % LAST.length];
+  _nameIdx++;
+  return `${first} ${last}`;
+}
+function nextId(): string {
+  _memberNum++;
+  return `HV-${String(_memberNum).padStart(4, "0")}`;
+}
+function toSlug(name: string): string {
+  return name.toLowerCase().replace(/\s+/g, ".").replace(/[^a-z.]/g, "");
+}
+function nextPhone(): string {
+  return `98${String(10000000 + _nameIdx).slice(1)}`;
+}
+
+async function upsert(data: any) {
+  const ex = await prisma.user.findUnique({ where: { email: data.email } });
+  return ex ?? await prisma.user.create({ data });
+}
+
+async function sale(memberId: string, adminId: string, month: number, year: number) {
+  const ex = await prisma.sale.findFirst({ where: { memberId, month, year, amount: 1800 } });
+  if (!ex) await prisma.sale.create({ data: { memberId, enteredById: adminId, amount: 1800, month, year } });
+}
+
+// Previous month helper
+function prevMonth(m: number, y: number, offset: number): { month: number; year: number } {
+  let mo = m - offset;
+  let yr = y;
+  while (mo <= 0) { mo += 12; yr--; }
+  return { month: mo, year: yr };
 }
 
 async function main() {
-  const hash = (p: string) => bcrypt.hash(p, 10);
+  console.log("🌱 Seeding Hervovibe with realistic ₹1,800-per-member data...\n");
 
-  const admin = await createUser({
+  // ── SYSTEM USERS ───────────────────────────────────────────────
+  const admin = await upsert({
     name: "Master Admin", email: "admin@hervovibe.in",
-    password: await hash("Admin@123"),
+    password: await bcrypt.hash("Admin@123", 10),
     role: "MASTER_ADMIN", rank: "CENTENNIAL", memberId: "HV-0001",
   });
 
-  const tm1 = await createUser({
+  const tm1 = await upsert({
     name: "Rahul Sharma", email: "rahul.team@hervovibe.in",
-    password: await hash("Team@123"),
+    password: await bcrypt.hash("Team@123", 10),
     role: "TEAM_MEMBER", rank: "GOLDEN", memberId: "HV-TM01", phone: "9876500001",
   });
 
-  const tm2 = await createUser({
+  const tm2 = await upsert({
     name: "Priya Singh", email: "priya.team@hervovibe.in",
-    password: await hash("Team@123"),
+    password: await bcrypt.hash("Team@123", 10),
     role: "TEAM_MEMBER", rank: "SILVER", memberId: "HV-TM02", phone: "9876500002",
   });
 
-  const platinum1 = await createUser({
-    name: "Vikram Patel", email: "vikram.p@hervovibe.in",
-    password: await hash("Member@123"),
-    role: "DISTRIBUTOR", rank: "PLATINUM", memberId: "HV-0010", phone: "9876501010",
-    managedBy: tm1.id, joiningDate: new Date("2024-01-15"),
-  });
+  // ── GOLDEN TREE ────────────────────────────────────────────────
+  //
+  //  MLM Math (every member buys ₹1,800/month personally):
+  //
+  //  Distributor (leaf)  →  ₹1,800 personal
+  //  Bronze  (5 dist)    →  5 × ₹1,800  =    ₹9,000  group  ✓ Bronze target
+  //  Silver  (5 bronze)  →  5 × ₹9,000  =   ₹45,000  group  ✓ Silver target
+  //  Golden  (5 silver)  →  5 × ₹45,000 = ₹2,25,000  group  ✓ Golden target
+  //
+  //  Total tree: 1 Golden + 5 Silver + 25 Bronze + 125 Distributors = 156 members
+  //  Every single rank is correctly qualified.
 
-  const diamond1 = await createUser({
-    name: "Sunita Devi", email: "sunita.d@hervovibe.in",
-    password: await hash("Member@123"),
-    role: "DISTRIBUTOR", rank: "DIAMOND", memberId: "HV-0020", phone: "9876502020",
-    sponsorId: platinum1.id, managedBy: tm1.id, joiningDate: new Date("2024-03-10"),
-  });
-
-  const diamond2 = await createUser({
-    name: "Amit Kumar", email: "amit.k@hervovibe.in",
-    password: await hash("Member@123"),
-    role: "DISTRIBUTOR", rank: "SUPER_DIAMOND", memberId: "HV-0021", phone: "9876502021",
-    sponsorId: platinum1.id, managedBy: tm2.id, joiningDate: new Date("2024-02-20"),
-  });
-
-  const golden1 = await createUser({
-    name: "Meena Gupta", email: "meena.g@hervovibe.in",
-    password: await hash("Member@123"),
-    role: "DISTRIBUTOR", rank: "GOLDEN", memberId: "HV-0030", phone: "9876503030",
-    sponsorId: diamond1.id, managedBy: tm1.id, joiningDate: new Date("2024-04-05"),
-  });
-
-  const golden2 = await createUser({
-    name: "Ravi Shankar", email: "ravi.s@hervovibe.in",
-    password: await hash("Member@123"),
-    role: "DISTRIBUTOR", rank: "GOLDEN", memberId: "HV-0031", phone: "9876503031",
-    sponsorId: diamond2.id, managedBy: tm2.id, joiningDate: new Date("2024-05-12"),
-  });
-
-  const silver1 = await createUser({
-    name: "Kavita Rani", email: "kavita.r@hervovibe.in",
-    password: await hash("Member@123"),
-    role: "DISTRIBUTOR", rank: "SILVER", memberId: "HV-0040", phone: "9876504040",
-    sponsorId: golden1.id, managedBy: tm1.id, joiningDate: new Date("2024-06-01"),
-  });
-
-  const silver2 = await createUser({
-    name: "Deepak Verma", email: "deepak.v@hervovibe.in",
-    password: await hash("Member@123"),
-    role: "DISTRIBUTOR", rank: "SILVER", memberId: "HV-0041", phone: "9876504041",
-    sponsorId: golden2.id, managedBy: tm2.id, joiningDate: new Date("2024-07-15"),
-  });
-
-  const silver3 = await createUser({
-    name: "Rekha Pandey", email: "rekha.p@hervovibe.in",
-    password: await hash("Member@123"),
-    role: "DISTRIBUTOR", rank: "SILVER", memberId: "HV-0042", phone: "9876504042",
-    sponsorId: golden1.id, managedBy: tm1.id, joiningDate: new Date("2024-12-01"),
-  });
-
-  const bronze1 = await createUser({
-    name: "Pooja Mishra", email: "pooja.m@hervovibe.in",
-    password: await hash("Member@123"),
-    role: "DISTRIBUTOR", rank: "BRONZE", memberId: "HV-0050", phone: "9876505050",
-    sponsorId: silver1.id, managedBy: tm1.id, joiningDate: new Date("2024-08-20"),
-  });
-
-  const bronze2 = await createUser({
-    name: "Suresh Tiwari", email: "suresh.t@hervovibe.in",
-    password: await hash("Member@123"),
-    role: "DISTRIBUTOR", rank: "BRONZE", memberId: "HV-0051", phone: "9876505051",
-    sponsorId: silver2.id, managedBy: tm2.id, joiningDate: new Date("2024-09-10"),
-  });
-
-  const dist1 = await createUser({
-    name: "Neha Joshi", email: "neha.j@hervovibe.in",
-    password: await hash("Member@123"),
-    role: "DISTRIBUTOR", rank: "DISTRIBUTOR", memberId: "HV-0060", phone: "9876506060",
-    sponsorId: bronze1.id, managedBy: tm1.id, joiningDate: new Date("2024-10-05"),
-  });
-
-  await createUser({
-    name: "Ankit Singh", email: "ankit.s@hervovibe.in",
-    password: await hash("Member@123"),
-    role: "DISTRIBUTOR", rank: "DISTRIBUTOR", memberId: "HV-0061", phone: "9876506061",
-    sponsorId: bronze2.id, managedBy: tm2.id, joiningDate: new Date("2024-11-15"),
-  });
-
-  // More downlines for Vikram (Platinum) — needs 5 direct
-  const diamond3 = await createUser({
-    name: "Sanjay Mehta", email: "sanjay.m@hervovibe.in",
-    password: await hash("Member@123"),
-    role: "DISTRIBUTOR", rank: "DIAMOND", memberId: "HV-0022", phone: "9876502022",
-    sponsorId: platinum1.id, managedBy: tm1.id, joiningDate: new Date("2024-03-15"),
-  });
-  const diamond4 = await createUser({
-    name: "Geeta Sharma", email: "geeta.sh@hervovibe.in",
-    password: await hash("Member@123"),
-    role: "DISTRIBUTOR", rank: "GOLDEN", memberId: "HV-0023", phone: "9876502023",
-    sponsorId: platinum1.id, managedBy: tm2.id, joiningDate: new Date("2024-04-01"),
-  });
-  const diamond5 = await createUser({
-    name: "Pankaj Yadav", email: "pankaj.y@hervovibe.in",
-    password: await hash("Member@123"),
-    role: "DISTRIBUTOR", rank: "SILVER", memberId: "HV-0024", phone: "9876502024",
-    sponsorId: platinum1.id, managedBy: tm1.id, joiningDate: new Date("2024-05-01"),
-  });
-
-  // More downlines for diamond1 — needs 5 direct
-  const g3 = await createUser({
-    name: "Asha Kumari", email: "asha.k@hervovibe.in",
-    password: await hash("Member@123"),
-    role: "DISTRIBUTOR", rank: "SILVER", memberId: "HV-0032", phone: "9876503032",
-    sponsorId: diamond1.id, managedBy: tm1.id, joiningDate: new Date("2024-06-10"),
-  });
-  const g4 = await createUser({
-    name: "Vijay Singh", email: "vijay.si@hervovibe.in",
-    password: await hash("Member@123"),
-    role: "DISTRIBUTOR", rank: "SILVER", memberId: "HV-0033", phone: "9876503033",
-    sponsorId: diamond1.id, managedBy: tm2.id, joiningDate: new Date("2024-07-01"),
-  });
-  const g5 = await createUser({
-    name: "Nirmala Devi", email: "nirmala.d@hervovibe.in",
-    password: await hash("Member@123"),
-    role: "DISTRIBUTOR", rank: "BRONZE", memberId: "HV-0034", phone: "9876503034",
-    sponsorId: diamond1.id, managedBy: tm1.id, joiningDate: new Date("2024-08-01"),
-  });
-
-  // More downlines for golden1 — needs 5 direct
-  const b3 = await createUser({
+  const golden = await upsert({
     name: "Ramesh Gupta", email: "ramesh.g@hervovibe.in",
-    password: await hash("Member@123"),
-    role: "DISTRIBUTOR", rank: "BRONZE", memberId: "HV-0052", phone: "9876505052",
-    sponsorId: golden1.id, managedBy: tm1.id, joiningDate: new Date("2024-09-05"),
-  });
-  const b4 = await createUser({
-    name: "Seema Jain", email: "seema.j@hervovibe.in",
-    password: await hash("Member@123"),
-    role: "DISTRIBUTOR", rank: "DISTRIBUTOR", memberId: "HV-0053", phone: "9876505053",
-    sponsorId: golden1.id, managedBy: tm2.id, joiningDate: new Date("2024-10-01"),
-  });
-  const b5 = await createUser({
-    name: "Tarun Bose", email: "tarun.b@hervovibe.in",
-    password: await hash("Member@123"),
-    role: "DISTRIBUTOR", rank: "DISTRIBUTOR", memberId: "HV-0054", phone: "9876505054",
-    sponsorId: golden1.id, managedBy: tm1.id, joiningDate: new Date("2024-11-01"),
+    password: await bcrypt.hash(MEMBER_PASS, 10),
+    role: "DISTRIBUTOR", rank: "GOLDEN", memberId: "HV-2001",
+    phone: "9876520001", managedBy: tm1.id,
+    joiningDate: new Date("2024-01-10"),
   });
 
-  // Sales data
-  const salesData = [
-    { memberId: platinum1.id, enteredById: admin.id, amount: 28125000 }, // Platinum: ₹2,81,25,000
-    { memberId: diamond2.id,  enteredById: admin.id, amount: 5625000 },  // Super Diamond: ₹56,25,000
-    { memberId: diamond1.id,  enteredById: admin.id, amount: 1125000 },  // Diamond: ₹11,25,000
-    { memberId: golden1.id,   enteredById: admin.id, amount: 225000 },   // Golden: ₹2,25,000
-    { memberId: golden2.id,   enteredById: admin.id, amount: 225000 },   // Golden: ₹2,25,000
-    { memberId: silver1.id,   enteredById: admin.id, amount: 45000 },    // Silver: ₹45,000
-    { memberId: silver2.id,   enteredById: admin.id, amount: 45000 },    // Silver: ₹45,000
-    { memberId: silver3.id,   enteredById: admin.id, amount: 45000 },    // Silver: ₹45,000
-    { memberId: bronze1.id,   enteredById: admin.id, amount: 9000 },     // Bronze: ₹9,000
-    { memberId: bronze2.id,   enteredById: admin.id, amount: 9000 },     // Bronze: ₹9,000
-    { memberId: dist1.id,     enteredById: admin.id, amount: 1800 },     // Distributor: ₹1,800
-  ];
+  const leafIds: string[] = [];
 
-  // Clear existing demo sales and re-insert with correct amounts
-  await prisma.sale.deleteMany({ where: { month: 5, year: 2026 } });
-  for (const s of salesData) {
-    await prisma.sale.create({ data: { ...s, month: 5, year: 2026 } });
+  for (let si = 0; si < 5; si++) {
+    const sName = nextName();
+    const silver = await upsert({
+      name: sName, email: `${toSlug(sName)}.sv${si}@hervovibe.in`,
+      password: await bcrypt.hash(MEMBER_PASS, 10),
+      role: "DISTRIBUTOR", rank: "SILVER", memberId: nextId(),
+      phone: nextPhone(), managedBy: tm1.id, sponsorId: golden.id,
+      joiningDate: new Date("2024-03-01"),
+    });
+
+    for (let bi = 0; bi < 5; bi++) {
+      const bName = nextName();
+      const bronze = await upsert({
+        name: bName, email: `${toSlug(bName)}.br${si}${bi}@hervovibe.in`,
+        password: await bcrypt.hash(MEMBER_PASS, 10),
+        role: "DISTRIBUTOR", rank: "BRONZE", memberId: nextId(),
+        phone: nextPhone(), managedBy: tm1.id, sponsorId: silver.id,
+        joiningDate: new Date("2024-05-01"),
+      });
+
+      for (let di = 0; di < 5; di++) {
+        const dName = nextName();
+        const dist = await upsert({
+          name: dName, email: `${toSlug(dName)}.d${si}${bi}${di}@hervovibe.in`,
+          password: await bcrypt.hash(MEMBER_PASS, 10),
+          role: "DISTRIBUTOR", rank: "DISTRIBUTOR", memberId: nextId(),
+          phone: nextPhone(), managedBy: tm2.id, sponsorId: bronze.id,
+          joiningDate: new Date("2024-07-01"),
+        });
+        leafIds.push(dist.id);
+        // Current month ₹1,800 sale for each leaf distributor
+        await sale(dist.id, admin.id, MONTH, YEAR);
+        // Last 2 months too (for chart data)
+        const pm1 = prevMonth(MONTH, YEAR, 1);
+        const pm2 = prevMonth(MONTH, YEAR, 2);
+        await sale(dist.id, admin.id, pm1.month, pm1.year);
+        await sale(dist.id, admin.id, pm2.month, pm2.year);
+      }
+    }
   }
 
-  console.log("✅ Seed complete: 1 admin + 2 team members + 12 distributors + 11 sales entries");
+  console.log(`✅ Golden tree: 1 + 5 + 25 + 125 = 156 members`);
+  console.log(`   Group volumes: Bronze ₹9,000 | Silver ₹45,000 | Golden ₹2,25,000`);
+
+  // ── BRONZE WITH ONLY 3 MEMBERS (rank mismatch demo) ───────────
+  //  Rank set to BRONZE but only 3 downline — warning should appear on profile.
+  //  Group volume = 3 × ₹1,800 = ₹5,400 (below Bronze ₹9,000 target too)
+
+  const bronzeUnder5 = await upsert({
+    name: "Sunil Mehta", email: "sunil.m@hervovibe.in",
+    password: await bcrypt.hash(MEMBER_PASS, 10),
+    role: "DISTRIBUTOR", rank: "BRONZE", memberId: "HV-3001",
+    phone: "9876530001", managedBy: tm2.id,
+    joiningDate: new Date("2024-09-01"),
+  });
+  await sale(bronzeUnder5.id, admin.id, MONTH, YEAR);
+
+  const under5Names = ["Ritu Kumar","Arvind Singh","Geeta Sharma"];
+  const under5Phones = ["9876531001","9876531002","9876531003"];
+  for (let i = 0; i < 3; i++) {
+    const d = await upsert({
+      name: under5Names[i], email: `${toSlug(under5Names[i])}.u${i}@hervovibe.in`,
+      password: await bcrypt.hash(MEMBER_PASS, 10),
+      role: "DISTRIBUTOR", rank: "DISTRIBUTOR", memberId: `HV-300${i + 2}`,
+      phone: under5Phones[i], managedBy: tm2.id, sponsorId: bronzeUnder5.id,
+      joiningDate: new Date("2024-10-01"),
+    });
+    await sale(d.id, admin.id, MONTH, YEAR);
+  }
+
+  console.log(`✅ Rank-mismatch demo: Sunil Mehta (BRONZE, 3/5 downline) — sunil.m@hervovibe.in`);
+
+  // ── 5 STANDALONE DISTRIBUTORS (no downline) ───────────────────
+  //  Each buys ₹1,800 personally. No team. Rank = DISTRIBUTOR.
+
+  const soloData = [
+    { name: "Neeraj Yadav",   phone: "9876540001", id: "HV-4001" },
+    { name: "Sanjeev Patel",  phone: "9876540002", id: "HV-4002" },
+    { name: "Meena Joshi",    phone: "9876540003", id: "HV-4003" },
+    { name: "Ajay Pandey",    phone: "9876540004", id: "HV-4004" },
+    { name: "Babita Tiwari",  phone: "9876540005", id: "HV-4005" },
+  ];
+
+  for (const s of soloData) {
+    const d = await upsert({
+      name: s.name, email: `${toSlug(s.name)}.solo@hervovibe.in`,
+      password: await bcrypt.hash(MEMBER_PASS, 10),
+      role: "DISTRIBUTOR", rank: "DISTRIBUTOR", memberId: s.id,
+      phone: s.phone, managedBy: tm2.id,
+      joiningDate: new Date("2025-01-15"),
+    });
+    await sale(d.id, admin.id, MONTH, YEAR);
+  }
+
+  console.log(`✅ 5 standalone distributors (no downline) — HV-4001 to HV-4005`);
+
+  // ── FINAL SUMMARY ──────────────────────────────────────────────
+  const memberCount = await prisma.user.count({ where: { role: "DISTRIBUTOR", deletedAt: null } });
+  const saleCount   = await prisma.sale.count();
+
+  console.log(`\n📊 Database totals: ${memberCount} distributors, ${saleCount} sales`);
+  console.log(`\n🔑 Test logins (password: Member@123 for all members):`);
+  console.log(`   Master Admin:      admin@hervovibe.in / Admin@123`);
+  console.log(`   Team Member 1:     rahul.team@hervovibe.in / Team@123`);
+  console.log(`   Golden member:     ramesh.g@hervovibe.in`);
+  console.log(`   Rank mismatch:     sunil.m@hervovibe.in  ← warning should show`);
+  console.log(`   Solo distributor:  neeraj.yadav.solo@hervovibe.in`);
+  console.log(`\n✅ Seed done!`);
 }
 
 main()
