@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Database, CheckCircle, Loader } from "lucide-react";
 
 export default function SettingsPage() {
   const [form, setForm] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
@@ -40,12 +41,55 @@ export default function SettingsPage() {
     setLoading(false);
   }
 
+  const [seeding, setSeeding]   = useState(false);
+  const [seedDone, setSeedDone] = useState<any>(null);
+
+  async function runSeed() {
+    if (!confirm("This will add 165 demo members to the database. Continue?")) return;
+    setSeeding(true);
+    setSeedDone(null);
+    const res = await fetch("/api/admin/seed", { method: "POST" });
+    const data = await res.json();
+    setSeedDone(data);
+    setSeeding(false);
+  }
+
   return (
     <div className="max-w-md">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Settings</h1>
         <p className="text-gray-500 text-sm">Manage your admin account</p>
       </div>
+
+      {/* Demo Data */}
+      <Card className="mb-5">
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Database className="w-4 h-4 text-blue-600" /> Demo Data
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-gray-500">
+            Load realistic test members — 1 Golden tree (156 members, each buying ₹1,800),
+            1 Bronze with rank mismatch, and 5 standalone distributors.
+          </p>
+          {seedDone?.success && (
+            <div className="flex items-start gap-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2 text-sm text-green-700">
+              <CheckCircle className="w-4 h-4 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-medium">Done! {seedDone.totals?.members} members, {seedDone.totals?.sales} sales added.</p>
+                <p className="text-xs mt-0.5">Refresh the Members page to see them.</p>
+              </div>
+            </div>
+          )}
+          {seedDone?.error && (
+            <p className="text-sm text-red-600">{seedDone.error}</p>
+          )}
+          <Button onClick={runSeed} disabled={seeding} className="bg-blue-600 hover:bg-blue-700 flex items-center gap-2">
+            {seeding ? <><Loader className="w-4 h-4 animate-spin" /> Loading data... (30–60 sec)</> : "Load Demo Data"}
+          </Button>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
