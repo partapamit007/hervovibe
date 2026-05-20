@@ -42,6 +42,18 @@ model User {
   joiningDate DateTime     @default(now())
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
+  deletedAt   DateTime?
+
+  // KYC & Identity
+  panNumber    String?
+  aadhaarNumber String?
+  address      String?
+
+  // Bank / Payout details
+  bankAccount  String?
+  ifscCode     String?
+  upiId        String?
+  bankName     String?
 
   sponsorId    String?
   sponsor      User?  @relation("MLMTree", fields: [sponsorId], references: [id])
@@ -51,29 +63,50 @@ model User {
   manager      User?  @relation("TeamManagement", fields: [managedBy], references: [id])
   managedUsers User[] @relation("TeamManagement")
 
-  salesEntries Sale[]    @relation("MemberSales")
-  enteredSales Sale[]    @relation("EnteredBySales")
-  piEntries    PIEntry[]
-  biEntries    BIEntry[]
+  salesEntries  Sale[]         @relation("MemberSales")
+  enteredSales  Sale[]         @relation("EnteredBySales")
+  piEntries     PIEntry[]
+  biEntries     BIEntry[]
+  payouts       PayoutRecord[]
 
   @@map("users")
 }
 
 model Sale {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   memberId    String
-  member      User     @relation("MemberSales", fields: [memberId], references: [id])
+  member      User      @relation("MemberSales", fields: [memberId], references: [id])
   enteredById String
-  enteredBy   User     @relation("EnteredBySales", fields: [enteredById], references: [id])
+  enteredBy   User      @relation("EnteredBySales", fields: [enteredById], references: [id])
   amount      Float
   month       Int
   year        Int
   invoiceUrl  String?
   notes       String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
 
   @@map("sales")
+}
+
+model PayoutRecord {
+  id          String   @id @default(cuid())
+  memberId    String
+  member      User     @relation(fields: [memberId], references: [id])
+  month       Int
+  year        Int
+  salaryAmount    Float    @default(0)
+  piAmount        Float    @default(0)
+  biAmount        Float    @default(0)
+  totalAmount     Float    @default(0)
+  paymentMode     String?
+  transactionRef  String?
+  notes           String?
+  paidAt      DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  @@map("payout_records")
 }
 
 model PIEntry {

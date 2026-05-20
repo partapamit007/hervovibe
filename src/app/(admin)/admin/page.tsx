@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Users, TrendingUp, AlertTriangle } from "lucide-react";
+import AdminSalesTrend from "@/components/admin/AdminSalesTrend";
 
 const rankColors: Record<string, string> = {
   DISTRIBUTOR:   "bg-gray-100 text-gray-700",
@@ -22,16 +23,22 @@ export default async function AdminDashboard() {
   const month = now.getMonth() + 1;
   const year = now.getFullYear();
 
-  const [totalMembers, activeMembers, monthlySales, recentSales, recentMembers] =
+  // Build last 6 months for trend chart
+  const trendMonths = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(year, month - 1 - i, 1);
+    return { month: d.getMonth() + 1, year: d.getFullYear() };
+  }).reverse();
+
+  const [totalMembers, activeMembers, monthlySales, recentSales, recentMembers, trendData] =
     await Promise.all([
-      prisma.user.count({ where: { role: "DISTRIBUTOR" } }),
-      prisma.user.count({ where: { role: "DISTRIBUTOR", status: "ACTIVE" } }),
+      prisma.user.count({ where: { role: "DISTRIBUTOR", deletedAt: null } }),
+      prisma.user.count({ where: { role: "DISTRIBUTOR", status: "ACTIVE", deletedAt: null } }),
       prisma.sale.aggregate({
         _sum: { amount: true },
-        where: { month, year },
+        where: { month, year, deletedAt: null },
       }),
       prisma.sale.findMany({
-        where: { month, year },
+        where: { month, year, deletedAt: null },
         orderBy: { createdAt: "desc" },
         take: 6,
         include: {
@@ -39,7 +46,7 @@ export default async function AdminDashboard() {
         },
       }),
       prisma.user.findMany({
-        where: { role: "DISTRIBUTOR" },
+        where: { role: "DISTRIBUTOR", deletedAt: null },
         orderBy: { joiningDate: "desc" },
         take: 6,
         select: {
@@ -51,6 +58,14 @@ export default async function AdminDashboard() {
           joiningDate: true,
         },
       }),
+      Promise.all(
+        trendMonths.map(({ month: m, year: y }) =>
+          prisma.sale.aggregate({
+            _sum: { amount: true },
+            where: { month: m, year: y, deletedAt: null },
+          }).then(r => ({ month: new Date(y, m - 1).toLocaleString("en-IN", { month: "short" }), total: r._sum.amount || 0 }))
+        )
+      ),
     ]);
 
   const totalSalesAmount = monthlySales._sum.amount || 0;
@@ -119,6 +134,18 @@ export default async function AdminDashboard() {
           );
         })}
       </div>
+
+      {/* 6-Month Sales Trend */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="text-base font-semibold text-gray-800 flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-green-600" /> 6-Month Sales Trend
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <AdminSalesTrend data={trendData} />
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Sales */}

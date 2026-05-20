@@ -17,6 +17,7 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
+  Wallet,
 } from "lucide-react";
 
 const navItems = [
@@ -26,6 +27,7 @@ const navItems = [
   { label: "Sales", href: "/admin/sales", icon: TrendingUp },
   { label: "Incentives", href: "/admin/incentives", icon: Gift },
   { label: "Rank Engine", href: "/admin/ranks", icon: Trophy },
+  { label: "Payouts", href: "/admin/payouts", icon: Wallet },
   { label: "Reports", href: "/admin/reports", icon: BarChart3 },
   { label: "Team Members", href: "/admin/team", icon: UserCheck },
 ];

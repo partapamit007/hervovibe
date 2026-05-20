@@ -3,6 +3,20 @@ import { Badge } from "@/components/ui/badge";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+async function getDownlineIds(memberId: string): Promise<string[]> {
+  const ids: string[] = [];
+  const queue = [memberId];
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    const children = await prisma.user.findMany({
+      where: { sponsorId: current, deletedAt: null },
+      select: { id: true },
+    });
+    for (const c of children) { ids.push(c.id); queue.push(c.id); }
+  }
+  return ids;
+}
+
 const rankTargets: Record<string, number> = {
   DISTRIBUTOR:   1800,
   BRONZE:        9000,
@@ -24,7 +38,9 @@ export default async function MemberDashboard() {
   const month = now.getMonth() + 1;
   const year = now.getFullYear();
 
-  const [member, thisMonthSales, recentSales] = await Promise.all([
+  const downlineIds = await getDownlineIds(userId!);
+
+  const [member, thisMonthSales, recentSales, downlineSalesAgg] = await Promise.all([
     prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -33,18 +49,26 @@ export default async function MemberDashboard() {
       },
     }),
     prisma.sale.findMany({
-      where: { memberId: userId, month, year },
+      where: { memberId: userId, month, year, deletedAt: null },
     }),
     prisma.sale.findMany({
-      where: { memberId: userId },
+      where: { memberId: userId, deletedAt: null },
       orderBy: [{ year: "desc" }, { month: "desc" }],
       take: 6,
     }),
+    downlineIds.length > 0
+      ? prisma.sale.aggregate({
+          _sum: { amount: true },
+          where: { memberId: { in: downlineIds }, month, year, deletedAt: null },
+        })
+      : Promise.resolve({ _sum: { amount: 0 } }),
   ]);
 
   const rank = member?.rank ?? session?.user?.rank ?? "DISTRIBUTOR";
   const target = rankTargets[rank] ?? 1800;
   const thisMonthTotal = thisMonthSales.reduce((s, e) => s + e.amount, 0);
+  const downlineTotal = downlineSalesAgg._sum.amount || 0;
+  const groupVolume = thisMonthTotal + downlineTotal;
   const teamSize = member?._count?.downline ?? 0;
 
   return (
@@ -81,11 +105,11 @@ export default async function MemberDashboard() {
         </Card>
         <Card>
           <CardHeader className="pb-1 pt-3 px-3">
-            <CardTitle className="text-xs text-gray-500">Earnings</CardTitle>
+            <CardTitle className="text-xs text-gray-500">Group Volume</CardTitle>
           </CardHeader>
           <CardContent className="px-3 pb-3">
-            <span className="text-xl font-bold text-gray-800">₹—</span>
-            <p className="text-xs text-gray-400 mt-0.5">Phase 4</p>
+            <span className="text-xl font-bold text-purple-600">₹{groupVolume.toLocaleString("en-IN")}</span>
+            <p className="text-xs text-gray-400 mt-0.5">Personal + {downlineIds.length} downline</p>
           </CardContent>
         </Card>
         <Card>

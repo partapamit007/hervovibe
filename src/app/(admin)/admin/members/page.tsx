@@ -5,43 +5,51 @@ import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Download } from "lucide-react";
 
 const rankColors: Record<string, string> = {
-  DISTRIBUTOR: "bg-gray-100 text-gray-700",
-  BRONZE: "bg-amber-100 text-amber-700",
-  SILVER: "bg-slate-100 text-slate-700",
-  GOLDEN: "bg-yellow-100 text-yellow-700",
-  DIAMOND: "bg-blue-100 text-blue-700",
+  DISTRIBUTOR:   "bg-gray-100 text-gray-700",
+  BRONZE:        "bg-amber-100 text-amber-700",
+  SILVER:        "bg-slate-100 text-slate-700",
+  GOLDEN:        "bg-yellow-100 text-yellow-700",
+  DIAMOND:       "bg-blue-100 text-blue-700",
   SUPER_DIAMOND: "bg-blue-200 text-blue-800",
-  PLATINUM: "bg-purple-100 text-purple-700",
-  CENTENNIAL: "bg-green-100 text-green-700",
+  PLATINUM:      "bg-purple-100 text-purple-700",
+  CENTENNIAL:    "bg-green-100 text-green-700",
 };
-
 const statusColors: Record<string, string> = {
-  ACTIVE: "bg-green-100 text-green-700",
-  INACTIVE: "bg-yellow-100 text-yellow-700",
+  ACTIVE:    "bg-green-100 text-green-700",
+  INACTIVE:  "bg-yellow-100 text-yellow-700",
   CANCELLED: "bg-red-100 text-red-700",
 };
 
 export default function MembersPage() {
-  const [members, setMembers] = useState<any[]>([]);
-  const [search, setSearch] = useState("");
+  const [members,    setMembers]    = useState<any[]>([]);
+  const [total,      setTotal]      = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [page,       setPage]       = useState(1);
+  const [search,     setSearch]     = useState("");
   const [rankFilter, setRankFilter] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [loading,    setLoading]    = useState(true);
 
-  useEffect(() => {
-    fetchMembers();
-  }, [search, rankFilter]);
+  useEffect(() => { fetchMembers(1); }, [search, rankFilter]);
 
-  async function fetchMembers() {
+  async function fetchMembers(p: number) {
     setLoading(true);
-    const params = new URLSearchParams();
-    if (search) params.set("search", search);
-    if (rankFilter) params.set("rank", rankFilter);
-    const res = await fetch(`/api/members?${params}`);
+    const params = new URLSearchParams({ page: String(p) });
+    if (search)     params.set("search", search);
+    if (rankFilter) params.set("rank",   rankFilter);
+    const res  = await fetch(`/api/members?${params}`);
     const data = await res.json();
-    setMembers(data);
+    setMembers(data.members ?? []);
+    setTotal(data.total ?? 0);
+    setTotalPages(data.totalPages ?? 1);
+    setPage(p);
     setLoading(false);
+  }
+
+  function exportCSV() {
+    window.location.href = "/api/export/members";
   }
 
   return (
@@ -49,11 +57,16 @@ export default function MembersPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Members</h1>
-          <p className="text-gray-500 text-sm">{members.length} total members</p>
+          <p className="text-gray-500 text-sm">{total} total members</p>
         </div>
-        <Link href="/admin/members/new">
-          <Button className="bg-green-600 hover:bg-green-700">+ Add Member</Button>
-        </Link>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={exportCSV} className="flex items-center gap-1.5 text-sm">
+            <Download className="w-4 h-4" /> Export CSV
+          </Button>
+          <Link href="/admin/members/new">
+            <Button className="bg-green-600 hover:bg-green-700">+ Add Member</Button>
+          </Link>
+        </div>
       </div>
 
       <div className="flex gap-3 mb-5">
@@ -61,7 +74,7 @@ export default function MembersPage() {
           type="text"
           placeholder="Search name, ID, phone..."
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => { setSearch(e.target.value); }}
           className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
         />
         <select
@@ -71,7 +84,7 @@ export default function MembersPage() {
         >
           <option value="">All Ranks</option>
           {Object.keys(rankColors).map((r) => (
-            <option key={r} value={r}>{r.replace("_", " ")}</option>
+            <option key={r} value={r}>{r.replace(/_/g, " ")}</option>
           ))}
         </select>
       </div>
@@ -81,37 +94,52 @@ export default function MembersPage() {
       ) : members.length === 0 ? (
         <div className="text-center py-12 text-gray-400">No members found</div>
       ) : (
-        <div className="space-y-3">
-          {members.map((m) => (
-            <Link key={m.id} href={`/admin/members/${m.id}`}>
-              <Card className="hover:shadow-md transition-shadow cursor-pointer">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-green-600 flex items-center justify-center text-white font-bold text-sm shrink-0">
-                        {m.name.charAt(0).toUpperCase()}
+        <>
+          <div className="space-y-3 mb-6">
+            {members.map((m) => (
+              <Link key={m.id} href={`/admin/members/${m.id}`}>
+                <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-green-600 flex items-center justify-center text-white font-bold text-sm shrink-0">
+                          {m.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="font-semibold text-gray-800 text-sm">{m.name}</p>
+                          <p className="text-xs text-gray-500">{m.memberId} · {m.phone || m.email}</p>
+                          {m.sponsor && (
+                            <p className="text-xs text-gray-400">Sponsor: {m.sponsor.name} ({m.sponsor.memberId})</p>
+                          )}
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-semibold text-gray-800 text-sm">{m.name}</p>
-                        <p className="text-xs text-gray-500">{m.memberId} · {m.phone || m.email}</p>
-                        {m.sponsor && (
-                          <p className="text-xs text-gray-400">Sponsor: {m.sponsor.name} ({m.sponsor.memberId})</p>
-                        )}
+                      <div className="flex flex-col items-end gap-1.5">
+                        <Badge className={`text-xs ${rankColors[m.rank]}`}>{m.rank.replace(/_/g, " ")}</Badge>
+                        <Badge className={`text-xs ${statusColors[m.status]}`}>{m.status}</Badge>
+                        <span className={`text-xs font-medium ${m._count.downline >= 5 ? "text-green-600" : m._count.downline > 0 ? "text-amber-600" : "text-gray-400"}`}>
+                          {m._count.downline >= 5 ? `✓ ${m._count.downline} members` : `${m._count.downline}/5 min`}
+                        </span>
                       </div>
                     </div>
-                    <div className="flex flex-col items-end gap-1.5">
-                      <Badge className={`text-xs ${rankColors[m.rank]}`}>{m.rank.replace("_", " ")}</Badge>
-                      <Badge className={`text-xs ${statusColors[m.status]}`}>{m.status}</Badge>
-                      <span className={`text-xs font-medium ${m._count.downline >= 5 ? "text-green-600" : m._count.downline > 0 ? "text-amber-600" : "text-gray-400"}`}>
-                        {m._count.downline >= 5 ? `✓ ${m._count.downline} members` : `${m._count.downline}/5 min`}
-                      </span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
-        </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2">
+              <Button variant="outline" size="sm" disabled={page === 1} onClick={() => fetchMembers(page - 1)}>
+                ← Prev
+              </Button>
+              <span className="text-sm text-gray-600">Page {page} of {totalPages}</span>
+              <Button variant="outline" size="sm" disabled={page === totalPages} onClick={() => fetchMembers(page + 1)}>
+                Next →
+              </Button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
