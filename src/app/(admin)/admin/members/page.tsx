@@ -5,7 +5,9 @@ import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Download } from "lucide-react";
+import { Download, AlertTriangle } from "lucide-react";
+
+const rankOrder = ["DISTRIBUTOR","BRONZE","SILVER","GOLDEN","DIAMOND","SUPER_DIAMOND","PLATINUM","CENTENNIAL"];
 
 const rankColors: Record<string, string> = {
   DISTRIBUTOR:   "bg-gray-100 text-gray-700",
@@ -114,7 +116,12 @@ export default function MembersPage() {
                         </div>
                       </div>
                       <div className="flex flex-col items-end gap-1.5">
-                        <Badge className={`text-xs ${rankColors[m.rank]}`}>{m.rank.replace(/_/g, " ")}</Badge>
+                        <div className="flex items-center gap-1">
+                          {rankOrder.indexOf(m.rank) > 0 && m._count.downline < 5 && (
+                            <AlertTriangle className="w-3.5 h-3.5 text-amber-500" title="Rank mismatch: insufficient downline" />
+                          )}
+                          <Badge className={`text-xs ${rankColors[m.rank]}`}>{m.rank.replace(/_/g, " ")}</Badge>
+                        </div>
                         <Badge className={`text-xs ${statusColors[m.status]}`}>{m.status}</Badge>
                         <span className={`text-xs font-medium ${m._count.downline >= 5 ? "text-green-600" : m._count.downline > 0 ? "text-amber-600" : "text-gray-400"}`}>
                           {m._count.downline >= 5 ? `✓ ${m._count.downline} members` : `${m._count.downline}/5 min`}
