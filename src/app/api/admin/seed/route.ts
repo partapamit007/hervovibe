@@ -43,6 +43,19 @@ export async function POST(_req: NextRequest) {
   const pm1 = prevMonth(1);
   const pm2 = prevMonth(2);
 
+  // ── 0. Wipe all existing distributors + their sales for a clean slate ──
+  const oldDistributors = await prisma.user.findMany({
+    where: { role: "DISTRIBUTOR" },
+    select: { id: true },
+  });
+  const oldIds = oldDistributors.map(u => u.id);
+  if (oldIds.length > 0) {
+    await prisma.sale.deleteMany({ where: { memberId: { in: oldIds } } });
+    // clear sponsorId references first to avoid FK constraint errors
+    await prisma.user.updateMany({ where: { id: { in: oldIds } }, data: { sponsorId: null } });
+    await prisma.user.deleteMany({ where: { id: { in: oldIds } } });
+  }
+
   // Hash password only ONCE — reused for all 165 members
   const PASS = await bcrypt.hash("Member@123", 10);
 
@@ -55,22 +68,19 @@ export async function POST(_req: NextRequest) {
   }
 
   // ── 1. Golden root ──────────────────────────────────────────
-  const goldenEmail = "ramesh.g@hervovibe.in";
-  await prisma.user.upsert({
-    where: { email: goldenEmail },
-    create: {
-      name: "Ramesh Gupta", email: goldenEmail, password: PASS,
+  const golden = await prisma.user.create({
+    data: {
+      name: "Ramesh Gupta", email: "ramesh.g@hervovibe.in", password: PASS,
       role: "DISTRIBUTOR", rank: "GOLDEN", memberId: "HV-G001",
       phone: "9001000001", joiningDate: new Date("2024-01-10"),
     },
-    update: {},
+    select: { id: true },
   });
-  const golden = await prisma.user.findUniqueOrThrow({ where: { email: goldenEmail }, select: { id: true } });
 
   // ── 2. Silver (5) ───────────────────────────────────────────
   const silverEmails = Array.from({ length: 5 }, (_, i) => `silver.${i}@hervovibe.in`);
   await prisma.user.createMany({
-    skipDuplicates: true,
+    skipDuplicates: false,
     data: silverEmails.map((email, i) => ({
       name: name(ni++), email, password: PASS,
       role: "DISTRIBUTOR", rank: "SILVER", memberId: `HV-S${String(i + 1).padStart(3, "0")}`,
@@ -86,7 +96,7 @@ export async function POST(_req: NextRequest) {
   // ── 3. Bronze (25) ─────────────────────────────────────────
   const bronzeEmails = Array.from({ length: 25 }, (_, i) => `bronze.${i}@hervovibe.in`);
   await prisma.user.createMany({
-    skipDuplicates: true,
+    skipDuplicates: false,
     data: bronzeEmails.map((email, i) => ({
       name: name(ni++), email, password: PASS,
       role: "DISTRIBUTOR", rank: "BRONZE", memberId: `HV-B${String(i + 1).padStart(3, "0")}`,
@@ -103,7 +113,7 @@ export async function POST(_req: NextRequest) {
   // ── 4. Distributors (125) ───────────────────────────────────
   const distEmails = Array.from({ length: 125 }, (_, i) => `dist.${i}@hervovibe.in`);
   await prisma.user.createMany({
-    skipDuplicates: true,
+    skipDuplicates: false,
     data: distEmails.map((email, i) => ({
       name: name(ni++), email, password: PASS,
       role: "DISTRIBUTOR", rank: "DISTRIBUTOR", memberId: `HV-D${String(i + 1).padStart(3, "0")}`,
@@ -119,7 +129,7 @@ export async function POST(_req: NextRequest) {
 
   // ── 5. Sales for all 125 distributors (3 months × ₹1,800) ─
   await prisma.sale.createMany({
-    skipDuplicates: true,
+    skipDuplicates: false,
     data: dists.flatMap(d => [
       { memberId: d.id, enteredById: admin.id, amount: 1800, month: MONTH, year: YEAR },
       { memberId: d.id, enteredById: admin.id, amount: 1800, month: pm1.month, year: pm1.year },
@@ -128,18 +138,16 @@ export async function POST(_req: NextRequest) {
   });
 
   // ── 6. Rank-mismatch: Sunil Mehta (BRONZE, only 3 downline) ─
-  await prisma.user.upsert({
-    where: { email: "sunil.m@hervovibe.in" },
-    create: {
+  const sunil = await prisma.user.create({
+    data: {
       name: "Sunil Mehta", email: "sunil.m@hervovibe.in", password: PASS,
       role: "DISTRIBUTOR", rank: "BRONZE", memberId: "HV-M001",
       phone: "9001004001", joiningDate: new Date("2024-09-01"),
     },
-    update: {},
+    select: { id: true },
   });
-  const sunil = await prisma.user.findUniqueOrThrow({ where: { email: "sunil.m@hervovibe.in" }, select: { id: true } });
   await prisma.sale.createMany({
-    skipDuplicates: true,
+    skipDuplicates: false,
     data: [{ memberId: sunil.id, enteredById: admin.id, amount: 1800, month: MONTH, year: YEAR }],
   });
 
@@ -149,7 +157,7 @@ export async function POST(_req: NextRequest) {
     { name: "Geeta Sharma",  email: "geeta.m@hervovibe.in",  memberId: "HV-M004", phone: "9001004004" },
   ];
   await prisma.user.createMany({
-    skipDuplicates: true,
+    skipDuplicates: false,
     data: mismatchDownline.map(u => ({
       ...u, password: PASS, role: "DISTRIBUTOR", rank: "DISTRIBUTOR",
       sponsorId: sunil.id, joiningDate: new Date("2024-10-01"),
@@ -160,7 +168,7 @@ export async function POST(_req: NextRequest) {
     select: { id: true },
   });
   await prisma.sale.createMany({
-    skipDuplicates: true,
+    skipDuplicates: false,
     data: mismatchDists.map(d => ({ memberId: d.id, enteredById: admin.id, amount: 1800, month: MONTH, year: YEAR })),
   });
 
@@ -173,7 +181,7 @@ export async function POST(_req: NextRequest) {
     { name: "Babita Tiwari", email: "babita.solo@hervovibe.in",  memberId: "HV-X005", phone: "9001005005" },
   ];
   await prisma.user.createMany({
-    skipDuplicates: true,
+    skipDuplicates: false,
     data: solos.map(u => ({
       ...u, password: PASS, role: "DISTRIBUTOR", rank: "DISTRIBUTOR",
       joiningDate: new Date("2025-01-15"),
@@ -184,7 +192,7 @@ export async function POST(_req: NextRequest) {
     select: { id: true },
   });
   await prisma.sale.createMany({
-    skipDuplicates: true,
+    skipDuplicates: false,
     data: soloDists.map(d => ({ memberId: d.id, enteredById: admin.id, amount: 1800, month: MONTH, year: YEAR })),
   });
 
