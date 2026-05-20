@@ -5,19 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, KeyRound, CheckCircle, XCircle, AlertTriangle } from "lucide-react";
-
-const rankOrder = ["DISTRIBUTOR","BRONZE","SILVER","GOLDEN","DIAMOND","SUPER_DIAMOND","PLATINUM","CENTENNIAL"];
-const rankTargets: Record<string, number> = {
-  DISTRIBUTOR:   1800,
-  BRONZE:        9000,
-  SILVER:        45000,
-  GOLDEN:        225000,
-  DIAMOND:       1125000,
-  SUPER_DIAMOND: 5625000,
-  PLATINUM:      28125000,
-  CENTENNIAL:    140625000,
-};
+import { ArrowLeft, KeyRound, CheckCircle, XCircle, Trash2 } from "lucide-react";
 
 const rankColors: Record<string, string> = {
   DISTRIBUTOR:   "bg-gray-100 text-gray-700",
@@ -83,6 +71,12 @@ export default function MemberDetailPage() {
     setTimeout(() => setResetStatus("idle"), 4000);
   }
 
+  async function handleDelete() {
+    if (!confirm(`Delete ${member.name}? This will hide them from the system. This cannot be undone.`)) return;
+    const res = await fetch(`/api/members/${id}`, { method: "DELETE" });
+    if (res.ok) router.push("/admin/members");
+  }
+
   if (loading)
     return (
       <div className="text-center py-12 text-gray-400">Loading...</div>
@@ -92,24 +86,8 @@ export default function MemberDetailPage() {
       <div className="text-center py-12 text-gray-400">Member not found</div>
     );
 
-  const totalSales = member.salesEntries?.reduce((s: number, e: any) => s + e.amount, 0) || 0;
-  const downlineCount = member.downline?.length || 0;
-  const rankIdx = rankOrder.indexOf(member.rank);
-
-  // Check what rank they actually qualify for based on sales + downline
-  const meetsDownline = rankIdx === 0 || downlineCount >= 5;
-  const meetsTarget   = totalSales >= (rankTargets[member.rank] || 0);
-  const rankMismatch  = rankIdx > 0 && (!meetsDownline || !meetsTarget);
-
-  // Compute the highest rank they actually qualify for
-  let qualifiedRank = "DISTRIBUTOR";
-  for (const r of rankOrder) {
-    const reqTarget = rankTargets[r] || 0;
-    const needsDownline = rankOrder.indexOf(r) > 0;
-    if (totalSales >= reqTarget && (!needsDownline || downlineCount >= 5)) {
-      qualifiedRank = r;
-    }
-  }
+  const totalSales =
+    member.salesEntries?.reduce((s: number, e: any) => s + e.amount, 0) || 0;
 
   return (
     <div className="max-w-2xl">
@@ -132,28 +110,6 @@ export default function MemberDetailPage() {
         <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3 mb-4">
           <XCircle className="w-4 h-4 shrink-0" />
           {resetMsg}
-        </div>
-      )}
-
-      {/* Rank mismatch warning */}
-      {rankMismatch && (
-        <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-lg px-4 py-3 mb-5">
-          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-500" />
-          <div>
-            <p className="font-semibold">Rank does not match qualifications</p>
-            <ul className="mt-1 space-y-0.5 text-amber-700">
-              {!meetsDownline && (
-                <li>• Needs <strong>5 direct downline members</strong> — currently has {downlineCount}</li>
-              )}
-              {!meetsTarget && (
-                <li>• Needs <strong>₹{(rankTargets[member.rank] || 0).toLocaleString("en-IN")} total sales</strong> for {member.rank.replace(/_/g, " ")} — currently ₹{totalSales.toLocaleString("en-IN")}</li>
-              )}
-            </ul>
-            <p className="mt-1 text-xs text-amber-600">
-              Based on current data, this member qualifies for: <strong>{qualifiedRank.replace(/_/g, " ")}</strong>.
-              The rank engine (Phase 4) will auto-correct this monthly.
-            </p>
-          </div>
         </div>
       )}
 
@@ -210,6 +166,15 @@ export default function MemberDetailPage() {
           >
             <KeyRound className="w-3.5 h-3.5" />
             {resetStatus === "loading" ? "Resetting..." : "Reset Password"}
+          </Button>
+          <Button
+            onClick={handleDelete}
+            variant="outline"
+            size="sm"
+            className="text-red-600 border-red-200 hover:bg-red-50 flex items-center gap-1.5"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            Delete
           </Button>
         </div>
       </div>
