@@ -118,7 +118,7 @@ export default function MembersPage() {
                       <div className="flex flex-col items-end gap-1.5">
                         <div className="flex items-center gap-1">
                           {rankOrder.indexOf(m.rank) > 0 && m._count.downline < 5 && (
-                            <AlertTriangle className="w-3.5 h-3.5 text-amber-500" title="Rank mismatch: insufficient downline" />
+                            <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
                           )}
                           <Badge className={`text-xs ${rankColors[m.rank]}`}>{m.rank.replace(/_/g, " ")}</Badge>
                         </div>
