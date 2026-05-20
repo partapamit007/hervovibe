@@ -4,60 +4,45 @@ import { auth } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
   const session = await auth();
-  if (
-    !session ||
-    (session.user.role !== "MASTER_ADMIN" && session.user.role !== "TEAM_MEMBER")
-  )
+  if (!session || session.user.role !== "MASTER_ADMIN")
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { memberId, amount, month, year, invoiceUrl, notes } = await req.json();
+  const { memberId, amount, month, year, notes } = await req.json();
   if (!memberId || !amount || !month || !year)
     return NextResponse.json({ error: "All fields required" }, { status: 400 });
 
-  const sale = await prisma.sale.create({
+  const entry = await prisma.pIEntry.create({
     data: {
       memberId,
-      enteredById: session.user.id,
       amount: parseFloat(amount),
       month: parseInt(month),
       year: parseInt(year),
-      invoiceUrl: invoiceUrl || null,
       notes: notes || null,
     },
-    include: { member: { select: { name: true, memberId: true, rank: true } } },
+    include: { member: { select: { name: true, memberId: true } } },
   });
-  return NextResponse.json(sale, { status: 201 });
+  return NextResponse.json(entry, { status: 201 });
 }
 
 export async function GET(req: NextRequest) {
   const session = await auth();
-  if (!session)
+  if (!session || session.user.role !== "MASTER_ADMIN")
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { searchParams } = new URL(req.url);
   const month = searchParams.get("month");
   const year = searchParams.get("year");
   const memberId = searchParams.get("memberId");
-  const enteredById = searchParams.get("enteredById");
 
-  const sales = await prisma.sale.findMany({
+  const entries = await prisma.pIEntry.findMany({
     where: {
       ...(month && year ? { month: parseInt(month), year: parseInt(year) } : {}),
       ...(memberId ? { memberId } : {}),
-      ...(enteredById === "me"
-        ? { enteredById: session.user.id }
-        : enteredById
-        ? { enteredById }
-        : {}),
     },
-    include: {
-      member: { select: { name: true, memberId: true, rank: true } },
-      enteredBy: { select: { name: true } },
-    },
+    include: { member: { select: { name: true, memberId: true } } },
     orderBy: { createdAt: "desc" },
-    take: 100,
   });
-  return NextResponse.json(sales);
+  return NextResponse.json(entries);
 }
 
 export async function DELETE(req: NextRequest) {
@@ -68,6 +53,6 @@ export async function DELETE(req: NextRequest) {
   const { id } = await req.json();
   if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
 
-  await prisma.sale.delete({ where: { id } });
+  await prisma.pIEntry.delete({ where: { id } });
   return NextResponse.json({ ok: true });
 }
