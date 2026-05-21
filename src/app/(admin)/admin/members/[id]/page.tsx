@@ -247,9 +247,14 @@ export default function MemberDetailPage() {
         <Card>
           <CardContent className="p-4">
             <p className="text-xs text-gray-500">Sponsor</p>
-            <p className="text-sm font-medium text-gray-800">
-              {member.sponsor?.name || "—"}
-            </p>
+            {member.sponsor ? (
+              <p className="text-sm font-medium text-gray-800">
+                {member.sponsor.name}
+                <span className="text-xs text-gray-400 ml-1">({member.sponsor.memberId})</span>
+              </p>
+            ) : (
+              <p className="text-sm font-medium text-gray-400 italic">Direct Member</p>
+            )}
           </CardContent>
         </Card>
         <Card>

@@ -34,7 +34,10 @@ export async function GET(req: NextRequest) {
   if (all) {
     const members = await prisma.user.findMany({
       where,
-      select: { id: true, name: true, memberId: true, rank: true },
+      select: {
+        id: true, name: true, memberId: true, rank: true,
+        _count: { select: { downline: true } },
+      },
       orderBy: { name: "asc" },
     });
     return NextResponse.json(members);

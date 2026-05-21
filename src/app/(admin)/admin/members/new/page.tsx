@@ -19,8 +19,8 @@ export default function AddMemberPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch("/api/members").then(r => r.json()).then(setSponsors);
-    fetch("/api/team-members").then(r => r.json()).then(setTeamMembers);
+    fetch("/api/members?all=1").then(r => r.json()).then(data => setSponsors(Array.isArray(data) ? data : []));
+    fetch("/api/team-members").then(r => r.json()).then(data => setTeamMembers(Array.isArray(data) ? data : []));
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {

@@ -18,7 +18,6 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
       salesEntries: {
         where: { deletedAt: null },
         orderBy: { createdAt: "desc" },
-        take: 12,
       },
       piEntries: { orderBy: { createdAt: "desc" }, take: 6 },
       biEntries: { orderBy: { createdAt: "desc" }, take: 6 },
