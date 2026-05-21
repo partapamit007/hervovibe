@@ -57,7 +57,7 @@ export default function AdminSalesPage() {
   const [invoicePreview, setInvoicePreview] = useState("");
 
   useEffect(() => {
-    fetch("/api/members").then((r) => r.json()).then((d) => setMembers(Array.isArray(d) ? d : []));
+    fetch("/api/members?all=1").then((r) => r.json()).then((d) => setMembers(Array.isArray(d) ? d : []));
     loadSales();
   }, []);
 

@@ -42,7 +42,7 @@ export default function IncentivesPage() {
   const [biNotes, setBiNotes] = useState("");
 
   useEffect(() => {
-    fetch("/api/members")
+    fetch("/api/members?all=1")
       .then((r) => r.json())
       .then((d) => setMembers(Array.isArray(d) ? d : []));
     loadPI();
