@@ -43,6 +43,21 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     bankAccount, ifscCode, upiId, bankName,
   } = body;
 
+  // Guard against circular sponsorship (A sponsors B, B sponsors A)
+  if (sponsorId && sponsorId !== id) {
+    let cur: string | null = sponsorId;
+    const visited = new Set<string>();
+    while (cur) {
+      if (cur === id) return NextResponse.json({ error: "Circular sponsorship detected" }, { status: 400 });
+      if (visited.has(cur)) break;
+      visited.add(cur);
+      const u = await prisma.user.findUnique({ where: { id: cur }, select: { sponsorId: true } });
+      cur = u?.sponsorId ?? null;
+    }
+  } else if (sponsorId === id) {
+    return NextResponse.json({ error: "A member cannot sponsor themselves" }, { status: 400 });
+  }
+
   const member = await prisma.user.update({
     where: { id },
     data: {

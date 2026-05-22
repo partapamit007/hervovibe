@@ -103,7 +103,9 @@ export async function POST(req: NextRequest) {
 
   const count = await prisma.user.count({ where: { role: "DISTRIBUTOR" } });
   const memberId = `HV-${String(count + 100).padStart(4, "0")}`;
-  const password = await bcrypt.hash("Member@123", 10);
+  const chars = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+  const tempPwd = "Hv@" + Array.from({ length: 7 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+  const password = await bcrypt.hash(tempPwd, 10);
 
   const member = await prisma.user.create({
     data: {
@@ -123,5 +125,5 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  return NextResponse.json(member, { status: 201 });
+  return NextResponse.json({ ...member, tempPassword: tempPwd }, { status: 201 });
 }

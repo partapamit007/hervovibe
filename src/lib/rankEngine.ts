@@ -23,6 +23,16 @@ export async function runRankEngine(month: number, year: number) {
     select: { id: true, rank: true, sponsorId: true },
   });
 
+  // Own sales for this month (required minimum: ₹1800 to qualify above DISTRIBUTOR)
+  const allSales = await prisma.sale.findMany({
+    where: { month, year, deletedAt: null },
+    select: { memberId: true, amount: true },
+  });
+  const salesByMember = new Map<string, number>();
+  for (const s of allSales) {
+    salesByMember.set(s.memberId, (salesByMember.get(s.memberId) ?? 0) + s.amount);
+  }
+
   // Build parent→children map
   const children = new Map<string, string[]>();
   for (const u of allUsers) {
@@ -43,7 +53,11 @@ export async function runRankEngine(month: number, year: number) {
     return count;
   }
 
-  function calcRank(teamSize: number): Rank {
+  function calcRank(userId: string, teamSize: number): Rank {
+    // Must have minimum personal purchase to qualify for rank above DISTRIBUTOR
+    const ownSales = salesByMember.get(userId) ?? 0;
+    if (ownSales < 1800) return "DISTRIBUTOR";
+
     let rank: Rank = "DISTRIBUTOR";
     for (const r of RANK_ORDER) {
       if (teamSize >= RANK_MIN_TEAM[r]) rank = r;
@@ -55,7 +69,7 @@ export async function runRankEngine(month: number, year: number) {
 
   for (const user of allUsers) {
     const teamSize = countDownline(user.id);
-    const newRank = calcRank(teamSize);
+    const newRank = calcRank(user.id, teamSize);
     if (newRank !== user.rank) {
       changes.push({ memberId: user.id, oldRank: user.rank, newRank, teamSize });
     }

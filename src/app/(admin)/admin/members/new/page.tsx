@@ -19,6 +19,7 @@ export default function AddMemberPage() {
   const [teamMembers, setTeamMembers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [tempPassword, setTempPassword] = useState("");
 
   useEffect(() => {
     fetch("/api/members?all=1").then(r => r.json()).then(data => setSponsors(Array.isArray(data) ? data : []));
@@ -35,7 +36,8 @@ export default function AddMemberPage() {
       body: JSON.stringify(form),
     });
     if (res.ok) {
-      router.push("/admin/members");
+      const d = await res.json();
+      setTempPassword(d.tempPassword ?? "");
     } else {
       const d = await res.json();
       setError(d.error || "Failed to add member");
@@ -47,8 +49,25 @@ export default function AddMemberPage() {
     <div className="max-w-lg">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Add New Member</h1>
-        <p className="text-gray-500 text-sm">Default login password: <span className="font-mono bg-gray-100 px-1 rounded">Member@123</span></p>
+        <p className="text-gray-500 text-sm">A secure temporary password is generated automatically.</p>
       </div>
+
+      {tempPassword && (
+        <div className="mb-4 p-4 bg-green-50 border border-green-300 rounded-lg">
+          <p className="text-sm font-semibold text-green-800 mb-1">Member created successfully!</p>
+          <p className="text-sm text-green-700">
+            Share this temporary password with the member:{" "}
+            <span className="font-mono font-bold bg-white border border-green-300 px-2 py-0.5 rounded text-green-900">
+              {tempPassword}
+            </span>
+          </p>
+          <p className="text-xs text-green-600 mt-1">They should change it after first login.</p>
+          <button onClick={() => router.push("/admin/members")}
+            className="mt-2 text-sm text-green-700 underline hover:no-underline">
+            Go to members list →
+          </button>
+        </div>
+      )}
 
       <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
         ⚠️ Minimum monthly sale of <strong>₹1,800</strong> is mandatory to maintain active membership.

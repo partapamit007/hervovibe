@@ -15,6 +15,13 @@ export async function POST(req: NextRequest) {
   if (!memberId || !month || !year)
     return NextResponse.json({ error: "Member, month and year required" }, { status: 400 });
 
+  // Team members can only record sales for members assigned to them
+  if (session.user.role === "TEAM_MEMBER") {
+    const target = await prisma.user.findUnique({ where: { id: memberId }, select: { managedBy: true } });
+    if (!target || target.managedBy !== session.user.id)
+      return NextResponse.json({ error: "You can only record sales for your assigned members" }, { status: 403 });
+  }
+
   // If products selected, compute amount from MRP; otherwise use manual amount
   let finalAmount = parseFloat(amount || "0");
   const saleItems: { productId: string; quantity: number; mrpAtSale: number }[] = [];
@@ -71,15 +78,20 @@ export async function GET(req: NextRequest) {
   const memberId = searchParams.get("memberId");
   const enteredById = searchParams.get("enteredById");
 
+  // Distributors can only see their own sales
+  const effectiveMemberId =
+    session.user.role === "DISTRIBUTOR" ? session.user.id : memberId;
+
   const sales = await prisma.sale.findMany({
     where: {
       ...(month && year ? { month: parseInt(month), year: parseInt(year) } : {}),
-      ...(memberId ? { memberId } : {}),
-      ...(enteredById === "me"
-        ? { enteredById: session.user.id }
-        : enteredById
-        ? { enteredById }
-        : {}),
+      ...(effectiveMemberId ? { memberId: effectiveMemberId } : {}),
+      ...(session.user.role !== "DISTRIBUTOR" &&
+        (enteredById === "me"
+          ? { enteredById: session.user.id }
+          : enteredById
+          ? { enteredById }
+          : {})),
     },
     include: {
       member: { select: { name: true, memberId: true, rank: true } },
