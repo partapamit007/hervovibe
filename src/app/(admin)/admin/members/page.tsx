@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Download, AlertTriangle } from "lucide-react";
+import { idColorStyles, type IdColor } from "@/lib/idColor";
 
 const rankOrder = ["DISTRIBUTOR","BRONZE","SILVER","GOLDEN","DIAMOND","SUPER_DIAMOND","PLATINUM","CENTENNIAL"];
 
@@ -104,8 +105,15 @@ export default function MembersPage() {
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-green-600 flex items-center justify-center text-white font-bold text-sm shrink-0">
-                          {m.name.charAt(0).toUpperCase()}
+                        <div className="relative shrink-0">
+                          <div className="w-10 h-10 rounded-full bg-green-600 flex items-center justify-center text-white font-bold text-sm">
+                            {m.name.charAt(0).toUpperCase()}
+                          </div>
+                          {m.idColor && (
+                            <span className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white text-[8px] flex items-center justify-center font-bold ${idColorStyles[m.idColor as IdColor]}`}>
+                              {(m.idColor as string)[0]}
+                            </span>
+                          )}
                         </div>
                         <div>
                           <p className="font-semibold text-gray-800 text-sm">{m.name}</p>

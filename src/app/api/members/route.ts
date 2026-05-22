@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import bcrypt from "bcryptjs";
+import { computeIdColor } from "@/lib/idColor";
 
 const PAGE_SIZE = 20;
 
@@ -43,6 +44,17 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(members);
   }
 
+  const now = new Date();
+  const curMonth = now.getMonth() + 1;
+  const curYear = now.getFullYear();
+  // Fetch 4 months of sales history to compute ID color (current + last 3)
+  const colorMonths: { month: number; year: number }[] = [];
+  for (let i = 0; i < 4; i++) {
+    let m = curMonth - i; let y = curYear;
+    if (m <= 0) { m += 12; y -= 1; }
+    colorMonths.push({ month: m, year: y });
+  }
+
   const [members, total] = await Promise.all([
     prisma.user.findMany({
       where,
@@ -52,6 +64,10 @@ export async function GET(req: NextRequest) {
         sponsorId: true,
         sponsor: { select: { name: true, memberId: true } },
         _count: { select: { downline: true } },
+        salesEntries: {
+          where: { OR: colorMonths },
+          select: { month: true, year: true, amount: true },
+        },
       },
       orderBy: { joiningDate: "desc" },
       skip: (page - 1) * PAGE_SIZE,
@@ -60,8 +76,14 @@ export async function GET(req: NextRequest) {
     prisma.user.count({ where }),
   ]);
 
+  const membersWithColor = members.map((m) => ({
+    ...m,
+    idColor: computeIdColor(m.salesEntries, curMonth, curYear),
+    salesEntries: undefined,
+  }));
+
   return NextResponse.json({
-    members,
+    members: membersWithColor,
     total,
     page,
     pageSize: PAGE_SIZE,

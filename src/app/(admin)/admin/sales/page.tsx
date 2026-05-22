@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { TrendingUp, CheckCircle, XCircle, Trash2, ExternalLink, ImagePlus, X } from "lucide-react";
+import { TrendingUp, CheckCircle, XCircle, Trash2, ExternalLink, ImagePlus, X, Plus, Minus } from "lucide-react";
 
 const rankColors: Record<string, string> = {
   DISTRIBUTOR:   "bg-gray-100 text-gray-700",
@@ -25,6 +25,8 @@ const currentYear = new Date().getFullYear();
 const years = Array.from({ length: 5 }, (_, i) => currentYear - i);
 
 interface Member { id: string; name: string; memberId: string; rank: string; }
+interface Product { id: string; name: string; mrp: number; piDirect: number; piUpline: number; }
+interface SaleItem { productId: string; quantity: number; }
 interface Sale {
   id: string; amount: number; month: number; year: number; invoiceUrl: string | null;
   notes: string | null; createdAt: string;
@@ -36,6 +38,7 @@ export default function AdminSalesPage() {
   const now = new Date();
   const fileRef = useRef<HTMLInputElement>(null);
   const [members, setMembers] = useState<Member[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -55,11 +58,33 @@ export default function AdminSalesPage() {
   const [notes, setNotes] = useState("");
   const [invoiceUrl, setInvoiceUrl] = useState("");
   const [invoicePreview, setInvoicePreview] = useState("");
+  const [items, setItems] = useState<SaleItem[]>([]);
+
+  const autoAmount = items.reduce((sum, item) => {
+    const p = products.find((p) => p.id === item.productId);
+    return sum + (p ? p.mrp * item.quantity : 0);
+  }, 0);
 
   useEffect(() => {
     fetch("/api/members?all=1").then((r) => r.json()).then((d) => setMembers(Array.isArray(d) ? d : []));
+    fetch("/api/products").then((r) => r.json()).then((d) => setProducts(Array.isArray(d) ? d : []));
     loadSales();
   }, []);
+
+  function addItem() {
+    if (products.length === 0) return;
+    setItems([...items, { productId: products[0].id, quantity: 1 }]);
+  }
+
+  function updateItem(index: number, field: keyof SaleItem, value: string) {
+    const updated = [...items];
+    updated[index] = { ...updated[index], [field]: field === "quantity" ? Math.max(1, parseInt(value) || 1) : value };
+    setItems(updated);
+  }
+
+  function removeItem(index: number) {
+    setItems(items.filter((_, i) => i !== index));
+  }
 
   function loadSales(m?: string, y?: string) {
     const params = new URLSearchParams();
@@ -100,16 +125,17 @@ export default function AdminSalesPage() {
     setLoading(true);
     setStatus("idle");
     try {
+      const finalAmount = items.length > 0 ? autoAmount : parseFloat(amount);
       const res = await fetch("/api/sales", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ memberId, amount, month, year, invoiceUrl, notes }),
+        body: JSON.stringify({ memberId, amount: items.length > 0 ? 0 : amount, month, year, invoiceUrl, notes, items }),
       });
       if (res.ok) {
         const member = members.find((m) => m.id === memberId);
         setStatus("success");
-        setStatusMsg(`Sale of ₹${parseInt(amount).toLocaleString("en-IN")} recorded for ${member?.name ?? "member"}.`);
-        setMemberId(""); setAmount(""); setNotes("");
+        setStatusMsg(`Sale of ₹${finalAmount.toLocaleString("en-IN")} recorded for ${member?.name ?? "member"}.`);
+        setMemberId(""); setAmount(""); setNotes(""); setItems([]);
         clearInvoice();
         loadSales(filterMonth, filterYear);
       } else {
@@ -166,12 +192,68 @@ export default function AdminSalesPage() {
                 {members.map((m) => <option key={m.id} value={m.id}>{m.name} ({m.memberId})</option>)}
               </select>
             </div>
+            {/* Product Line Items */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-gray-700">Products (optional)</label>
+                {products.length > 0 && (
+                  <button type="button" onClick={addItem}
+                    className="flex items-center gap-1 text-xs text-green-600 hover:text-green-700 font-medium">
+                    <Plus className="w-3.5 h-3.5" /> Add Product
+                  </button>
+                )}
+              </div>
+              {items.length > 0 && (
+                <div className="space-y-2 mb-2">
+                  {items.map((item, i) => {
+                    const p = products.find((p) => p.id === item.productId);
+                    return (
+                      <div key={i} className="flex items-center gap-2">
+                        <select
+                          value={item.productId}
+                          onChange={(e) => updateItem(i, "productId", e.target.value)}
+                          className="flex-1 px-2.5 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                        >
+                          {products.map((p) => (
+                            <option key={p.id} value={p.id}>{p.name} — ₹{p.mrp}</option>
+                          ))}
+                        </select>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button type="button" onClick={() => updateItem(i, "quantity", String(item.quantity - 1))}
+                            className="w-7 h-7 flex items-center justify-center rounded border border-gray-300 text-gray-500 hover:bg-gray-100">
+                            <Minus className="w-3 h-3" />
+                          </button>
+                          <span className="w-8 text-center text-sm font-medium">{item.quantity}</span>
+                          <button type="button" onClick={() => updateItem(i, "quantity", String(item.quantity + 1))}
+                            className="w-7 h-7 flex items-center justify-center rounded border border-gray-300 text-gray-500 hover:bg-gray-100">
+                            <Plus className="w-3 h-3" />
+                          </button>
+                        </div>
+                        <span className="text-xs text-gray-500 shrink-0 w-16 text-right">
+                          ₹{((p?.mrp ?? 0) * item.quantity).toLocaleString("en-IN")}
+                        </span>
+                        <button type="button" onClick={() => removeItem(i)} className="text-gray-400 hover:text-red-500">
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                  <div className="text-right text-sm font-semibold text-green-700 pr-12">
+                    Total: ₹{autoAmount.toLocaleString("en-IN")}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Manual amount — only shown if no products selected */}
+            {items.length === 0 && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Amount (₹)</label>
               <input type="number" min="1" value={amount} onChange={(e) => setAmount(e.target.value)} required
                 placeholder="e.g. 5000"
                 className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
             </div>
+            )}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Month</label>

@@ -18,18 +18,20 @@ import {
   ChevronLeft,
   ChevronRight,
   Wallet,
+  Package,
 } from "lucide-react";
 
 const navItems = [
-  { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
-  { label: "Members", href: "/admin/members", icon: Users },
-  { label: "MLM Tree", href: "/admin/members/tree", icon: Network },
-  { label: "Sales", href: "/admin/sales", icon: TrendingUp },
-  { label: "Incentives", href: "/admin/incentives", icon: Gift },
-  { label: "Rank Engine", href: "/admin/ranks", icon: Trophy },
-  { label: "Payouts", href: "/admin/payouts", icon: Wallet },
-  { label: "Reports", href: "/admin/reports", icon: BarChart3 },
-  { label: "Team Members", href: "/admin/team", icon: UserCheck },
+  { label: "Dashboard",    href: "/admin",              icon: LayoutDashboard },
+  { label: "Members",      href: "/admin/members",      icon: Users },
+  { label: "MLM Tree",     href: "/admin/members/tree", icon: Network },
+  { label: "Products",     href: "/admin/products",     icon: Package },
+  { label: "Sales",        href: "/admin/sales",        icon: TrendingUp },
+  { label: "Incentives",   href: "/admin/incentives",   icon: Gift },
+  { label: "Rank Engine",  href: "/admin/ranks",        icon: Trophy },
+  { label: "Payouts",      href: "/admin/payouts",      icon: Wallet },
+  { label: "Reports",      href: "/admin/reports",      icon: BarChart3 },
+  { label: "Team Members", href: "/admin/team",         icon: UserCheck },
 ];
 
 interface AdminSidebarProps {

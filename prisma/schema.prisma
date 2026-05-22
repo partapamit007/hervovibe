@@ -63,11 +63,12 @@ model User {
   manager      User?  @relation("TeamManagement", fields: [managedBy], references: [id])
   managedUsers User[] @relation("TeamManagement")
 
-  salesEntries  Sale[]         @relation("MemberSales")
-  enteredSales  Sale[]         @relation("EnteredBySales")
+  salesEntries  Sale[]             @relation("MemberSales")
+  enteredSales  Sale[]             @relation("EnteredBySales")
   piEntries     PIEntry[]
   biEntries     BIEntry[]
   payouts       PayoutRecord[]
+  commissions   CommissionRecord[] @relation("EarnedCommissions")
 
   @@map("users")
 }
@@ -86,8 +87,70 @@ model Sale {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   deletedAt   DateTime?
+  saleItems   SaleItem[]
 
   @@map("sales")
+}
+
+model Product {
+  id        String     @id @default(cuid())
+  name      String
+  mrp       Float
+  piDirect  Float      @default(0)
+  piUpline  Float      @default(0)
+  biDirect  Float      @default(0)
+  biUpline  Float      @default(0)
+  isActive  Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  saleItems SaleItem[]
+
+  @@map("products")
+}
+
+model SaleItem {
+  id        String  @id @default(cuid())
+  saleId    String
+  sale      Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int
+  mrpAtSale Float
+
+  @@map("sale_items")
+}
+
+enum CommissionType {
+  BUSINESS
+  PI
+  BI
+}
+
+model CommissionRecord {
+  id           String         @id @default(cuid())
+  memberId     String
+  member       User           @relation("EarnedCommissions", fields: [memberId], references: [id])
+  saleId       String
+  fromMemberId String
+  month        Int
+  year         Int
+  type         CommissionType
+  amount       Float
+  depth        Int
+  createdAt    DateTime       @default(now())
+
+  @@map("commission_records")
+}
+
+model PiRate {
+  id           String   @id @default(cuid())
+  month        Int
+  year         Int
+  ratePerPoint Float
+  createdAt    DateTime @default(now())
+
+  @@unique([month, year])
+  @@map("pi_rates")
 }
 
 model PayoutRecord {
