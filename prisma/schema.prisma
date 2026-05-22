@@ -96,10 +96,8 @@ model Product {
   id        String     @id @default(cuid())
   name      String
   mrp       Float
-  piDirect  Float      @default(0)
-  piUpline  Float      @default(0)
-  biDirect  Float      @default(0)
-  biUpline  Float      @default(0)
+  piDirect  Float      @default(0)  // PI points seller earns per unit
+  piUpline  Float      @default(0)  // PI points L1 sponsor earns; halves each level up
   isActive  Boolean    @default(true)
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt

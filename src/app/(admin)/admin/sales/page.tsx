@@ -196,11 +196,15 @@ export default function AdminSalesPage() {
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="block text-sm font-medium text-gray-700">Products (optional)</label>
-                {products.length > 0 && (
+                {products.length > 0 ? (
                   <button type="button" onClick={addItem}
                     className="flex items-center gap-1 text-xs text-green-600 hover:text-green-700 font-medium">
                     <Plus className="w-3.5 h-3.5" /> Add Product
                   </button>
+                ) : (
+                  <a href="/admin/products" className="text-xs text-blue-500 hover:underline">
+                    Add products to catalog first →
+                  </a>
                 )}
               </div>
               {items.length > 0 && (

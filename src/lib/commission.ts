@@ -52,12 +52,10 @@ export async function calculateCommissions(saleId: string) {
   // Seller's own 8% business commission
   records.push({ ...base, memberId: sale.memberId, type: "BUSINESS", amount: sale.amount * 0.08, depth: 0 });
 
-  // Seller's own PI and BI (direct values)
+  // Seller's own PI (direct value)
   for (const item of sale.saleItems) {
     if (item.product.piDirect > 0)
       records.push({ ...base, memberId: sale.memberId, type: "PI", amount: item.quantity * item.product.piDirect, depth: 0 });
-    if (item.product.biDirect > 0)
-      records.push({ ...base, memberId: sale.memberId, type: "BI", amount: item.quantity * item.product.biDirect, depth: 0 });
   }
 
   // Walk up the sponsor chain (up to 7 levels)
@@ -68,18 +66,22 @@ export async function calculateCommissions(saleId: string) {
 
     const maxDepth = RANK_MAX_DEPTH[upline.rank] ?? 0;
 
-    // Business commission — only if this upline's rank allows this depth
+    // Business commission — only if this upline's rank qualifies for this depth
     if (maxDepth >= depth && DEPTH_PCT[depth]) {
       records.push({ ...base, memberId: upline.id, type: "BUSINESS", amount: sale.amount * DEPTH_PCT[depth], depth });
     }
 
-    // PI and BI upline values — travel to all upline levels regardless of rank
+    // PI upline — halves at each level going up
+    // L1 gets piUpline × 1, L2 gets × 0.5, L3 gets × 0.25, etc.
     for (const item of sale.saleItems) {
-      if (item.product.piUpline > 0)
-        records.push({ ...base, memberId: upline.id, type: "PI", amount: item.quantity * item.product.piUpline, depth });
-      if (item.product.biUpline > 0)
-        records.push({ ...base, memberId: upline.id, type: "BI", amount: item.quantity * item.product.biUpline, depth });
+      if (item.product.piUpline > 0) {
+        const piAmount = item.quantity * item.product.piUpline * Math.pow(0.5, depth - 1);
+        if (piAmount >= 0.01)
+          records.push({ ...base, memberId: upline.id, type: "PI", amount: piAmount, depth });
+      }
     }
+
+    // BI is manually decided by client — NOT auto-calculated per product
 
     currentSponsorId = upline.sponsorId;
   }
