@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, PlayCircle, CheckCircle, XCircle, ArrowUp, ArrowDown } from "lucide-react";
+import { Trophy, PlayCircle, CheckCircle, XCircle, ArrowUp, Lock } from "lucide-react";
 
 const RANK_ORDER = ["DISTRIBUTOR","BRONZE","SILVER","GOLDEN","DIAMOND","SUPER_DIAMOND","PLATINUM","CENTENNIAL"];
 const RANK_MIN_TEAM: Record<string, number> = {
@@ -68,7 +68,7 @@ export default function RanksPage() {
   }
 
   async function handleRun() {
-    if (!confirm(`Run rank engine for ${months[parseInt(month) - 1]} ${year}? This will upgrade/downgrade member ranks based on team size.`)) return;
+    if (!confirm(`Run rank engine for ${months[parseInt(month) - 1]} ${year}?\n\nThis will promote members who have met both:\n• Minimum team size for the next rank\n• ₹1,800+ own sales this month\n\nNo rank will be downgraded.`)) return;
     setRunning(true);
     setResult(null);
     setRunError("");
@@ -98,7 +98,12 @@ export default function RanksPage() {
     <div className="max-w-3xl">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Rank Engine</h1>
-        <p className="text-sm text-gray-500 mt-0.5">Auto-calculate and upgrade/downgrade member ranks based on team size</p>
+        <p className="text-sm text-gray-500 mt-0.5">Promotes members when both conditions are met — ranks are permanent and never downgraded</p>
+      </div>
+
+      <div className="mb-6 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800 flex items-start gap-2">
+        <Lock className="w-4 h-4 mt-0.5 shrink-0" />
+        <span><strong>Rank Rule:</strong> Once a member achieves a rank, it is permanent. Salary may be withheld if sales conditions aren't met that month, but the rank title stays. Promotion requires <strong>both</strong>: minimum team size AND ≥ ₹1,800 own sales that month.</span>
       </div>
 
       {/* Rank Table */}
@@ -115,6 +120,7 @@ export default function RanksPage() {
                 <tr className="text-xs text-gray-500 border-b border-gray-100">
                   <th className="text-left pb-2 font-medium">Rank</th>
                   <th className="text-right pb-2 font-medium">Min Team</th>
+                  <th className="text-right pb-2 font-medium">Own Sales/Month</th>
                   <th className="text-right pb-2 font-medium">Monthly Salary</th>
                 </tr>
               </thead>
@@ -127,6 +133,7 @@ export default function RanksPage() {
                     <td className="py-2 text-right text-gray-600">
                       {RANK_MIN_TEAM[r] === 0 ? "—" : RANK_MIN_TEAM[r].toLocaleString("en-IN")}
                     </td>
+                    <td className="py-2 text-right text-gray-600">₹1,800</td>
                     <td className="py-2 text-right font-medium text-gray-800">{RANK_SALARY[r]}</td>
                   </tr>
                 ))}
@@ -134,7 +141,7 @@ export default function RanksPage() {
             </table>
           </div>
           <p className="text-xs text-gray-400 mt-3">
-            Own monthly purchase ≥ ₹1,800 required to earn salary and commissions.
+            Both conditions must be met in the same month to earn a promotion. Salary requires same conditions every month.
           </p>
         </CardContent>
       </Card>
@@ -177,15 +184,13 @@ export default function RanksPage() {
             <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-3">
               <div className="flex items-center gap-2 text-green-700 text-sm font-semibold mb-2">
                 <CheckCircle className="w-4 h-4 shrink-0" />
-                Done — {result.processed} members processed, {result.changed} rank changes
+                Done — {result.processed} members processed, {result.changed} promotion{result.changed !== 1 ? "s" : ""}
               </div>
               {result.changes.length > 0 && (
                 <div className="space-y-1 mt-2">
                   {result.changes.map((c) => (
                     <div key={c.memberId} className="flex items-center gap-2 text-xs text-gray-700">
-                      {isUpgrade(c.oldRank, c.newRank)
-                        ? <ArrowUp className="w-3 h-3 text-green-600 shrink-0" />
-                        : <ArrowDown className="w-3 h-3 text-red-500 shrink-0" />}
+                      <ArrowUp className="w-3 h-3 text-green-600 shrink-0" />
                       <Badge className={`text-xs ${rankColors[c.oldRank]}`}>{c.oldRank.replace(/_/g, " ")}</Badge>
                       <span className="text-gray-400">→</span>
                       <Badge className={`text-xs ${rankColors[c.newRank]}`}>{c.newRank.replace(/_/g, " ")}</Badge>
@@ -221,9 +226,7 @@ export default function RanksPage() {
                     <p className="text-xs text-gray-500">{h.member.memberId} · {months[h.month - 1]} {h.year}</p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    {isUpgrade(h.oldRank, h.newRank)
-                      ? <ArrowUp className="w-3.5 h-3.5 text-green-600" />
-                      : <ArrowDown className="w-3.5 h-3.5 text-red-500" />}
+                    <ArrowUp className="w-3.5 h-3.5 text-green-600" />
                     <Badge className={`text-xs ${rankColors[h.oldRank]}`}>{h.oldRank.replace(/_/g, " ")}</Badge>
                     <span className="text-xs text-gray-400">→</span>
                     <Badge className={`text-xs ${rankColors[h.newRank]}`}>{h.newRank.replace(/_/g, " ")}</Badge>

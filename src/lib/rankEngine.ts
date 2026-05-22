@@ -53,23 +53,30 @@ export async function runRankEngine(month: number, year: number) {
     return count;
   }
 
-  function calcRank(userId: string, teamSize: number): Rank {
-    // Must have minimum personal purchase to qualify for rank above DISTRIBUTOR
+  // Ranks are permanent — once achieved they are never taken away.
+  // Promotion requires BOTH: team size ≥ next rank minimum AND own sales ≥ ₹1800 this month.
+  function calcPromotedRank(userId: string, currentRank: Rank, teamSize: number): Rank {
     const ownSales = salesByMember.get(userId) ?? 0;
-    if (ownSales < 1800) return "DISTRIBUTOR";
+    const currentIdx = RANK_ORDER.indexOf(currentRank);
+    let promoted: Rank = currentRank; // never go below current
 
-    let rank: Rank = "DISTRIBUTOR";
-    for (const r of RANK_ORDER) {
-      if (teamSize >= RANK_MIN_TEAM[r]) rank = r;
+    for (let i = currentIdx + 1; i < RANK_ORDER.length; i++) {
+      const r = RANK_ORDER[i];
+      if (teamSize >= RANK_MIN_TEAM[r] && ownSales >= 1800) {
+        promoted = r;
+      } else {
+        break; // ranks are progressive — if this one fails, higher ones will too
+      }
     }
-    return rank;
+    return promoted;
   }
 
+  // Only collect upgrades — no downgrades ever
   const changes: { memberId: string; oldRank: Rank; newRank: Rank; teamSize: number }[] = [];
 
   for (const user of allUsers) {
     const teamSize = countDownline(user.id);
-    const newRank = calcRank(user.id, teamSize);
+    const newRank = calcPromotedRank(user.id, user.rank, teamSize);
     if (newRank !== user.rank) {
       changes.push({ memberId: user.id, oldRank: user.rank, newRank, teamSize });
     }
@@ -86,7 +93,7 @@ export async function runRankEngine(month: number, year: number) {
         newRank: c.newRank,
         month,
         year,
-        reason: "Auto rank engine",
+        reason: `Promoted: team size ${c.teamSize} + ₹1800 sales met`,
       })),
     });
   }

@@ -4,6 +4,11 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle, Lock, Trophy } from "lucide-react";
 
+const RANK_MIN_TEAM_DISPLAY: Record<string, string> = {
+  DISTRIBUTOR: "—", BRONZE: "5", SILVER: "25", GOLDEN: "125",
+  DIAMOND: "625", SUPER_DIAMOND: "3,125", PLATINUM: "15,625", CENTENNIAL: "78,125",
+};
+
 const rankTargets: Record<string, number> = {
   DISTRIBUTOR:   1800,
   BRONZE:        9000,
@@ -89,7 +94,7 @@ export default async function RankPage() {
           <p className="text-sm opacity-80">
             {rank === "CENTENNIAL"
               ? "Top rank achieved — Centennial level"
-              : `Monthly target: ₹${target.toLocaleString("en-IN")}`}
+              : `Your rank is permanent — it will never be taken away`}
           </p>
         </div>
         <CardContent className="p-5">
@@ -121,27 +126,31 @@ export default async function RankPage() {
         </CardContent>
       </Card>
 
-      {/* Team requirement */}
+      {/* Promotion requirements */}
       <Card className="mb-5">
-        <CardContent className="p-4 flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium text-gray-800">Direct Team Size</p>
-            <p className="text-xs text-gray-500 mt-0.5">
-              Minimum 5 direct members required for rank qualification
-            </p>
+        <CardContent className="p-4">
+          <p className="text-sm font-semibold text-gray-800 mb-3">Next Rank Requirements</p>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-600">Team size (direct members)</span>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-gray-900">{teamSize}</span>
+                <Badge className={`text-xs ${teamSize >= 5 ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
+                  {teamSize >= 5 ? "Met ✓" : `Need ${5 - teamSize} more`}
+                </Badge>
+              </div>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-600">Own sales this month</span>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-gray-900">₹{currentSales.toLocaleString("en-IN")}</span>
+                <Badge className={`text-xs ${currentSales >= 1800 ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
+                  {currentSales >= 1800 ? "Met ✓" : `Need ₹${(1800 - currentSales).toLocaleString("en-IN")} more`}
+                </Badge>
+              </div>
+            </div>
           </div>
-          <div className="text-right shrink-0 ml-4">
-            <p className="text-2xl font-bold text-gray-900">{teamSize}</p>
-            <Badge
-              className={`text-xs ${
-                teamSize >= 5
-                  ? "bg-green-100 text-green-700"
-                  : "bg-amber-100 text-amber-700"
-              }`}
-            >
-              {teamSize >= 5 ? "Met" : `${5 - teamSize} more needed`}
-            </Badge>
-          </div>
+          <p className="text-xs text-gray-400 mt-3">Both conditions must be met in the same month to advance. Salary also requires both conditions every month.</p>
         </CardContent>
       </Card>
 
@@ -209,8 +218,10 @@ export default async function RankPage() {
                     </div>
                     <p className="text-xs text-gray-400 mt-0.5">
                       {r === "CENTENNIAL"
-                        ? "Top rank — no target"
-                        : `Monthly target: ₹${rTarget.toLocaleString("en-IN")}`}
+                        ? "Top rank — no further target"
+                        : isAchieved
+                        ? "Permanently achieved"
+                        : `Requires ≥ ₹1,800/month + ${RANK_MIN_TEAM_DISPLAY[r]} team members`}
                     </p>
                   </div>
                 </div>
