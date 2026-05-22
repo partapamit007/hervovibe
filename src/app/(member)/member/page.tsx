@@ -26,8 +26,8 @@ const rankColors: Record<string, string> = {
 
 const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
-async function getDownlineCount(memberId: string): Promise<number> {
-  let count = 0;
+async function getDownlineCount(memberId: string): Promise<{ total: number; green: number }> {
+  const ids: string[] = [];
   const queue = [memberId];
   while (queue.length) {
     const cur = queue.shift()!;
@@ -35,10 +35,20 @@ async function getDownlineCount(memberId: string): Promise<number> {
       where: { sponsorId: cur, deletedAt: null },
       select: { id: true },
     });
-    count += kids.length;
+    ids.push(...kids.map(k => k.id));
     queue.push(...kids.map(k => k.id));
   }
-  return count;
+  if (ids.length === 0) return { total: 0, green: 0 };
+  const now = new Date();
+  const month = now.getMonth() + 1;
+  const year = now.getFullYear();
+  const salesThisMonth = await prisma.sale.groupBy({
+    by: ["memberId"],
+    where: { memberId: { in: ids }, month, year, deletedAt: null },
+    _sum: { amount: true },
+  });
+  const greenSet = new Set(salesThisMonth.filter(s => (s._sum.amount ?? 0) >= 1800).map(s => s.memberId));
+  return { total: ids.length, green: greenSet.size };
 }
 
 async function getDownlineSales(memberId: string, month: number, year: number): Promise<number> {
@@ -124,18 +134,20 @@ export default async function MemberDashboard() {
     return { ...d, idColor: computeIdColor(sales, month, year) };
   });
 
-  const [teamSize, downlineSalesTotal] = await Promise.all([
+  const [downlineCounts, downlineSalesTotal] = await Promise.all([
     getDownlineCount(userId),
     getDownlineSales(userId, month, year),
   ]);
 
-  const groupVolume  = ownSales + downlineSalesTotal;
+  const teamSize      = downlineCounts.total;
+  const greenTeamSize = downlineCounts.green;
+  const groupVolume   = ownSales + downlineSalesTotal;
 
-  // Rank progress
+  // Rank progress — based on active (GREEN) team members, matching promotion criteria
   const rankIdx      = RANK_ORDER.indexOf(rank);
   const nextRank     = rankIdx < RANK_ORDER.length - 1 ? RANK_ORDER[rankIdx + 1] : null;
   const nextTarget   = nextRank ? RANK_MIN_TEAM[nextRank] : null;
-  const rankProgress = nextTarget ? Math.min(100, Math.round((teamSize / nextTarget) * 100)) : 100;
+  const rankProgress = nextTarget ? Math.min(100, Math.round((greenTeamSize / nextTarget) * 100)) : 100;
 
   return (
     <div className="max-w-lg mx-auto px-4 pb-8">
@@ -197,12 +209,13 @@ export default async function MemberDashboard() {
         </Card>
         <Card>
           <CardHeader className="pb-1 pt-3 px-3">
-            <CardTitle className="text-xs text-gray-500">Team Size</CardTitle>
+            <CardTitle className="text-xs text-gray-500">Active Team</CardTitle>
           </CardHeader>
           <CardContent className="px-3 pb-3">
-            <span className="text-xl font-bold text-gray-800">{teamSize}</span>
+            <span className="text-xl font-bold text-gray-800">{greenTeamSize}</span>
+            <p className="text-xs text-gray-400 mt-0.5">{teamSize} total · {greenTeamSize} ≥₹1,800</p>
             {nextRank && (
-              <p className="text-xs text-gray-400 mt-0.5">{nextTarget! - teamSize} more for {nextRank.replace(/_/g," ")}</p>
+              <p className="text-xs text-amber-600 mt-0.5">{Math.max(0, nextTarget! - greenTeamSize)} active needed for {nextRank.replace(/_/g," ")}</p>
             )}
           </CardContent>
         </Card>
@@ -252,12 +265,13 @@ export default async function MemberDashboard() {
           <CardContent className="px-4 pb-3">
             <div className="flex items-center justify-between text-xs text-gray-500 mb-1.5">
               <span>{rank.replace(/_/g," ")}</span>
-              <span>{nextRank.replace(/_/g," ")} ({nextTarget!.toLocaleString("en-IN")} team)</span>
+              <span>{nextRank.replace(/_/g," ")} ({nextTarget!.toLocaleString("en-IN")} active)</span>
             </div>
             <div className="w-full bg-gray-100 rounded-full h-2">
               <div className="bg-green-500 h-2 rounded-full transition-all" style={{ width: `${rankProgress}%` }} />
             </div>
-            <p className="text-xs text-gray-400 mt-1.5">{teamSize} of {nextTarget!.toLocaleString("en-IN")} members ({rankProgress}%)</p>
+            <p className="text-xs text-gray-400 mt-1.5">{greenTeamSize} of {nextTarget!.toLocaleString("en-IN")} active members ({rankProgress}%)</p>
+            <p className="text-xs text-gray-300 mt-0.5">Active = team member with ≥₹1,800 sales this month</p>
           </CardContent>
         </Card>
       )}

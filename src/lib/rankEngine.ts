@@ -42,6 +42,7 @@ export async function runRankEngine(month: number, year: number) {
     }
   }
 
+  // Count ALL downline (for display/history)
   function countDownline(id: string): number {
     let count = 0;
     const queue = [...(children.get(id) ?? [])];
@@ -53,16 +54,29 @@ export async function runRankEngine(month: number, year: number) {
     return count;
   }
 
+  // Count only ACTIVE downline — members with ≥₹1,800 own sales this month.
+  // Rank promotion requires this count to meet the minimum, not just headcount.
+  function countGreenDownline(id: string): number {
+    let count = 0;
+    const queue = [...(children.get(id) ?? [])];
+    while (queue.length) {
+      const cur = queue.shift()!;
+      if ((salesByMember.get(cur) ?? 0) >= 1800) count++;
+      queue.push(...(children.get(cur) ?? []));
+    }
+    return count;
+  }
+
   // Ranks are permanent — once achieved they are never taken away.
-  // Promotion requires BOTH: team size ≥ next rank minimum AND own sales ≥ ₹1800 this month.
-  function calcPromotedRank(userId: string, currentRank: Rank, teamSize: number): Rank {
+  // Promotion requires BOTH: ≥ N active (GREEN, ≥₹1800) team members AND own sales ≥ ₹1800.
+  function calcPromotedRank(userId: string, currentRank: Rank, greenTeamSize: number): Rank {
     const ownSales = salesByMember.get(userId) ?? 0;
     const currentIdx = RANK_ORDER.indexOf(currentRank);
     let promoted: Rank = currentRank; // never go below current
 
     for (let i = currentIdx + 1; i < RANK_ORDER.length; i++) {
       const r = RANK_ORDER[i];
-      if (teamSize >= RANK_MIN_TEAM[r] && ownSales >= 1800) {
+      if (greenTeamSize >= RANK_MIN_TEAM[r] && ownSales >= 1800) {
         promoted = r;
       } else {
         break; // ranks are progressive — if this one fails, higher ones will too
@@ -72,13 +86,14 @@ export async function runRankEngine(month: number, year: number) {
   }
 
   // Only collect upgrades — no downgrades ever
-  const changes: { memberId: string; oldRank: Rank; newRank: Rank; teamSize: number }[] = [];
+  const changes: { memberId: string; oldRank: Rank; newRank: Rank; teamSize: number; greenTeamSize: number }[] = [];
 
   for (const user of allUsers) {
     const teamSize = countDownline(user.id);
-    const newRank = calcPromotedRank(user.id, user.rank, teamSize);
+    const greenTeamSize = countGreenDownline(user.id);
+    const newRank = calcPromotedRank(user.id, user.rank, greenTeamSize);
     if (newRank !== user.rank) {
-      changes.push({ memberId: user.id, oldRank: user.rank, newRank, teamSize });
+      changes.push({ memberId: user.id, oldRank: user.rank, newRank, teamSize, greenTeamSize });
     }
   }
 
@@ -93,7 +108,7 @@ export async function runRankEngine(month: number, year: number) {
         newRank: c.newRank,
         month,
         year,
-        reason: `Promoted: team size ${c.teamSize} + ₹1800 sales met`,
+        reason: `Promoted: ${c.greenTeamSize} active members (≥₹1800 each) of ${c.teamSize} total + own ₹1800 met`,
       })),
     });
   }

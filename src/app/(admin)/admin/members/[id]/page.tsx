@@ -5,19 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, KeyRound, CheckCircle, XCircle, AlertTriangle, Trash2 } from "lucide-react";
-
-const rankOrder = ["DISTRIBUTOR","BRONZE","SILVER","GOLDEN","DIAMOND","SUPER_DIAMOND","PLATINUM","CENTENNIAL"];
-const rankTargets: Record<string, number> = {
-  DISTRIBUTOR:   1800,
-  BRONZE:        9000,
-  SILVER:        45000,
-  GOLDEN:        225000,
-  DIAMOND:       1125000,
-  SUPER_DIAMOND: 5625000,
-  PLATINUM:      28125000,
-  CENTENNIAL:    140625000,
-};
+import { ArrowLeft, KeyRound, CheckCircle, XCircle, Trash2, Copy } from "lucide-react";
 
 const rankColors: Record<string, string> = {
   DISTRIBUTOR:   "bg-gray-100 text-gray-700",
@@ -37,6 +25,7 @@ export default function MemberDetailPage() {
   const [loading, setLoading] = useState(true);
   const [resetStatus, setResetStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [resetMsg, setResetMsg] = useState("");
+  const [newTempPassword, setNewTempPassword] = useState("");
 
   useEffect(() => {
     fetch(`/api/members/${id}`)
@@ -58,20 +47,16 @@ export default function MemberDetailPage() {
   }
 
   async function handleResetPassword() {
-    if (
-      !confirm(
-        `Reset password for ${member.name}? Their new password will be Member@123`
-      )
-    )
-      return;
+    if (!confirm(`Reset password for ${member.name}? A new temporary password will be generated.`)) return;
     setResetStatus("loading");
+    setNewTempPassword("");
     try {
-      const res = await fetch(`/api/members/${id}/reset-password`, {
-        method: "POST",
-      });
+      const res = await fetch(`/api/members/${id}/reset-password`, { method: "POST" });
+      const data = await res.json();
       if (res.ok) {
         setResetStatus("success");
-        setResetMsg("Password reset to Member@123 successfully.");
+        setNewTempPassword(data.tempPassword ?? "");
+        setResetMsg("Password reset successfully. Share the new temporary password below:");
       } else {
         setResetStatus("error");
         setResetMsg("Failed to reset password. Please try again.");
@@ -80,7 +65,6 @@ export default function MemberDetailPage() {
       setResetStatus("error");
       setResetMsg("Network error. Please try again.");
     }
-    setTimeout(() => setResetStatus("idle"), 4000);
   }
 
   async function handleDelete() {
@@ -99,21 +83,6 @@ export default function MemberDetailPage() {
     );
 
   const totalSales = member.salesEntries?.reduce((s: number, e: any) => s + e.amount, 0) || 0;
-  const downlineCount = member.downline?.length || 0;
-  const rankIdx = rankOrder.indexOf(member.rank);
-
-  const meetsDownline = rankIdx === 0 || downlineCount >= 5;
-  const meetsTarget   = totalSales >= (rankTargets[member.rank] || 0);
-  const rankMismatch  = rankIdx > 0 && (!meetsDownline || !meetsTarget);
-
-  let qualifiedRank = "DISTRIBUTOR";
-  for (const r of rankOrder) {
-    const reqTarget = rankTargets[r] || 0;
-    const needsDownline = rankOrder.indexOf(r) > 0;
-    if (totalSales >= reqTarget && (!needsDownline || downlineCount >= 5)) {
-      qualifiedRank = r;
-    }
-  }
 
   return (
     <div className="max-w-2xl">
@@ -127,37 +96,29 @@ export default function MemberDetailPage() {
 
       {/* Reset password feedback */}
       {resetStatus === "success" && (
-        <div className="flex items-center gap-2 bg-green-50 border border-green-200 text-green-700 text-sm rounded-lg px-4 py-3 mb-4">
-          <CheckCircle className="w-4 h-4 shrink-0" />
-          {resetMsg}
+        <div className="bg-green-50 border border-green-200 text-green-700 text-sm rounded-lg px-4 py-3 mb-4">
+          <div className="flex items-center gap-2 mb-2">
+            <CheckCircle className="w-4 h-4 shrink-0" />
+            {resetMsg}
+          </div>
+          {newTempPassword && (
+            <div className="flex items-center gap-2 bg-white border border-green-200 rounded-lg px-3 py-2 mt-1">
+              <code className="text-sm font-mono font-bold text-green-800 flex-1">{newTempPassword}</code>
+              <button
+                onClick={() => navigator.clipboard.writeText(newTempPassword)}
+                className="text-green-600 hover:text-green-800 shrink-0"
+                title="Copy password"
+              >
+                <Copy className="w-4 h-4" />
+              </button>
+            </div>
+          )}
         </div>
       )}
       {resetStatus === "error" && (
         <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3 mb-4">
           <XCircle className="w-4 h-4 shrink-0" />
           {resetMsg}
-        </div>
-      )}
-
-      {/* Rank mismatch warning */}
-      {rankMismatch && (
-        <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-lg px-4 py-3 mb-5">
-          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-500" />
-          <div>
-            <p className="font-semibold">Rank does not match qualifications</p>
-            <ul className="mt-1 space-y-0.5 text-amber-700">
-              {!meetsDownline && (
-                <li>• Needs <strong>5 direct downline members</strong> — currently has {downlineCount}</li>
-              )}
-              {!meetsTarget && (
-                <li>• Needs <strong>₹{(rankTargets[member.rank] || 0).toLocaleString("en-IN")} total sales</strong> for {member.rank.replace(/_/g, " ")} — currently ₹{totalSales.toLocaleString("en-IN")}</li>
-              )}
-            </ul>
-            <p className="mt-1 text-xs text-amber-600">
-              Based on current data, this member qualifies for: <strong>{qualifiedRank.replace(/_/g, " ")}</strong>.
-              The rank engine (Phase 4) will auto-correct this monthly.
-            </p>
-          </div>
         </div>
       )}
 
@@ -285,29 +246,9 @@ export default function MemberDetailPage() {
             <CardTitle className="text-sm">
               Direct Downline ({member.downline?.length || 0} members)
             </CardTitle>
-            <span
-              className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                member.downline?.length >= 5
-                  ? "bg-green-100 text-green-700"
-                  : "bg-amber-100 text-amber-700"
-              }`}
-            >
-              {member.downline?.length >= 5
-                ? "Min. met"
-                : `${5 - (member.downline?.length || 0)} more for min`}
+            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-blue-50 text-blue-600">
+              Direct only
             </span>
-          </div>
-          <div className="flex gap-1 mt-2">
-            {[0, 1, 2, 3, 4].map((i) => (
-              <div
-                key={i}
-                className={`h-2 flex-1 rounded-full ${
-                  i < (member.downline?.length || 0)
-                    ? "bg-green-500"
-                    : "bg-gray-200"
-                }`}
-              />
-            ))}
           </div>
         </CardHeader>
         <CardContent>

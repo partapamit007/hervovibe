@@ -57,10 +57,7 @@ export default async function RankPage() {
   const [member, monthSalesAgg] = await Promise.all([
     prisma.user.findUnique({
       where: { id: userId },
-      select: {
-        rank: true,
-        _count: { select: { downline: true } },
-      },
+      select: { rank: true },
     }),
     prisma.sale.aggregate({
       where: { memberId: userId, month, year },
@@ -73,7 +70,35 @@ export default async function RankPage() {
   const currentSales = monthSalesAgg._sum.amount ?? 0;
   const progress = target > 0 ? Math.min((currentSales / target) * 100, 100) : 100;
   const currentRankIndex = rankOrder.indexOf(rank);
-  const teamSize = member?._count?.downline ?? 0;
+
+  // Compute green (active) team size for rank promotion display
+  const allDownlineIds: string[] = [];
+  {
+    const queue = [userId!];
+    while (queue.length) {
+      const cur = queue.shift()!;
+      const kids = await prisma.user.findMany({
+        where: { sponsorId: cur, deletedAt: null },
+        select: { id: true },
+      });
+      allDownlineIds.push(...kids.map(k => k.id));
+      queue.push(...kids.map(k => k.id));
+    }
+  }
+  const teamSize = allDownlineIds.length;
+  let greenTeamSize = 0;
+  if (allDownlineIds.length > 0) {
+    const downlineSales = await prisma.sale.groupBy({
+      by: ["memberId"],
+      where: { memberId: { in: allDownlineIds }, month, year, deletedAt: null },
+      _sum: { amount: true },
+    });
+    greenTeamSize = downlineSales.filter(s => (s._sum.amount ?? 0) >= 1800).length;
+  }
+
+  const rankIdx = rankOrder.indexOf(rank);
+  const nextRankName = rankIdx < rankOrder.length - 1 ? rankOrder[rankIdx + 1] : null;
+  const nextRankMin = nextRankName ? { DISTRIBUTOR: 0, BRONZE: 5, SILVER: 25, GOLDEN: 125, DIAMOND: 625, SUPER_DIAMOND: 3125, PLATINUM: 15625, CENTENNIAL: 78125 }[nextRankName] : null;
 
   return (
     <div className="max-w-lg mx-auto">
@@ -127,32 +152,40 @@ export default async function RankPage() {
       </Card>
 
       {/* Promotion requirements */}
-      <Card className="mb-5">
-        <CardContent className="p-4">
-          <p className="text-sm font-semibold text-gray-800 mb-3">Next Rank Requirements</p>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">Team size (direct members)</span>
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-bold text-gray-900">{teamSize}</span>
-                <Badge className={`text-xs ${teamSize >= 5 ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
-                  {teamSize >= 5 ? "Met ✓" : `Need ${5 - teamSize} more`}
-                </Badge>
+      {nextRankName && nextRankMin != null && (
+        <Card className="mb-5">
+          <CardContent className="p-4">
+            <p className="text-sm font-semibold text-gray-800 mb-3">To reach {nextRankName.replace(/_/g," ")}</p>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex-1 mr-3">
+                  <span className="text-sm text-gray-600">Active team members</span>
+                  <p className="text-xs text-gray-400">Each must have ≥₹1,800 sales this month</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-bold text-gray-900">{greenTeamSize} / {nextRankMin}</span>
+                  <Badge className={`text-xs ${greenTeamSize >= nextRankMin ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
+                    {greenTeamSize >= nextRankMin ? "Met ✓" : `Need ${nextRankMin - greenTeamSize} more`}
+                  </Badge>
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex-1 mr-3">
+                  <span className="text-sm text-gray-600">Your own sales this month</span>
+                  <p className="text-xs text-gray-400">You must also be active (≥₹1,800)</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-bold text-gray-900">₹{currentSales.toLocaleString("en-IN")}</span>
+                  <Badge className={`text-xs ${currentSales >= 1800 ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
+                    {currentSales >= 1800 ? "Met ✓" : `Need ₹${(1800 - currentSales).toLocaleString("en-IN")}`}
+                  </Badge>
+                </div>
               </div>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">Own sales this month</span>
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-bold text-gray-900">₹{currentSales.toLocaleString("en-IN")}</span>
-                <Badge className={`text-xs ${currentSales >= 1800 ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
-                  {currentSales >= 1800 ? "Met ✓" : `Need ₹${(1800 - currentSales).toLocaleString("en-IN")} more`}
-                </Badge>
-              </div>
-            </div>
-          </div>
-          <p className="text-xs text-gray-400 mt-3">Both conditions must be met in the same month to advance. Salary also requires both conditions every month.</p>
-        </CardContent>
-      </Card>
+            <p className="text-xs text-gray-400 mt-3 bg-gray-50 px-3 py-2 rounded-lg">Both conditions must be met in the same month. Total team: {teamSize} members ({teamSize - greenTeamSize} inactive this month).</p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Rank Ladder */}
       <Card>
@@ -221,7 +254,7 @@ export default async function RankPage() {
                         ? "Top rank — no further target"
                         : isAchieved
                         ? "Permanently achieved"
-                        : `Requires ≥ ₹1,800/month + ${RANK_MIN_TEAM_DISPLAY[r]} team members`}
+                        : `Own ≥₹1,800 + ${RANK_MIN_TEAM_DISPLAY[r]} active team members (each ≥₹1,800)`}
                     </p>
                   </div>
                 </div>
