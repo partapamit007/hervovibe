@@ -12,6 +12,8 @@ export default function AddMemberPage() {
     name: "", email: "", phone: "",
     sponsorId: "", managedBy: "",
     joiningDate: today,
+    panNumber: "", aadhaarNumber: "", address: "",
+    bankName: "", bankAccount: "", ifscCode: "", upiId: "",
   });
   const [sponsors, setSponsors] = useState<any[]>([]);
   const [teamMembers, setTeamMembers] = useState<any[]>([]);
@@ -130,6 +132,87 @@ export default function AddMemberPage() {
                 ))}
               </select>
             </div>
+            <div className="pt-2 border-t border-gray-100">
+              <p className="text-sm font-semibold text-gray-700 mb-3">KYC / Identity</p>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">PAN Number</label>
+                    <input
+                      value={form.panNumber}
+                      onChange={e => setForm({ ...form, panNumber: e.target.value.toUpperCase() })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                      placeholder="ABCDE1234F"
+                      maxLength={10}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Aadhaar Number</label>
+                    <input
+                      value={form.aadhaarNumber}
+                      onChange={e => setForm({ ...form, aadhaarNumber: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                      placeholder="XXXX XXXX XXXX"
+                      maxLength={14}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                  <textarea
+                    value={form.address}
+                    onChange={e => setForm({ ...form, address: e.target.value })}
+                    rows={2}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    placeholder="Full address"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-gray-100">
+              <p className="text-sm font-semibold text-gray-700 mb-3">Bank / Payout Details</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Bank Name</label>
+                  <input
+                    value={form.bankName}
+                    onChange={e => setForm({ ...form, bankName: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    placeholder="SBI"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Account Number</label>
+                  <input
+                    value={form.bankAccount}
+                    onChange={e => setForm({ ...form, bankAccount: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    placeholder="123456789012"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">IFSC Code</label>
+                  <input
+                    value={form.ifscCode}
+                    onChange={e => setForm({ ...form, ifscCode: e.target.value.toUpperCase() })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    placeholder="SBIN0001234"
+                    maxLength={11}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">UPI ID</label>
+                  <input
+                    value={form.upiId}
+                    onChange={e => setForm({ ...form, upiId: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    placeholder="name@upi"
+                  />
+                </div>
+              </div>
+            </div>
+
             {error && <p className="text-red-500 text-sm">{error}</p>}
             <div className="flex gap-3 pt-2">
               <Button type="submit" disabled={loading} className="bg-green-600 hover:bg-green-700">

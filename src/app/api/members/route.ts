@@ -75,7 +75,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
-  const { name, email, phone, sponsorId, managedBy, joiningDate } = body;
+  const { name, email, phone, sponsorId, managedBy, joiningDate,
+          panNumber, aadhaarNumber, address,
+          bankName, bankAccount, ifscCode, upiId } = body;
 
   const count = await prisma.user.count({ where: { role: "DISTRIBUTOR" } });
   const memberId = `HV-${String(count + 100).padStart(4, "0")}`;
@@ -87,8 +89,15 @@ export async function POST(req: NextRequest) {
       role: "DISTRIBUTOR",
       rank: "DISTRIBUTOR",
       joiningDate: joiningDate ? new Date(joiningDate) : new Date(),
-      ...(sponsorId && { sponsorId }),
-      ...(managedBy && { managedBy }),
+      ...(sponsorId    && { sponsorId }),
+      ...(managedBy    && { managedBy }),
+      ...(panNumber    && { panNumber }),
+      ...(aadhaarNumber && { aadhaarNumber }),
+      ...(address      && { address }),
+      ...(bankName     && { bankName }),
+      ...(bankAccount  && { bankAccount }),
+      ...(ifscCode     && { ifscCode }),
+      ...(upiId        && { upiId }),
     },
   });
 
