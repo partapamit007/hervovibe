@@ -11,11 +11,12 @@ export async function GET(req: NextRequest) {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { searchParams } = new URL(req.url);
-  const search = searchParams.get("search") || "";
-  const rank   = searchParams.get("rank")   || "";
-  const status = searchParams.get("status") || "";
-  const page   = Math.max(1, parseInt(searchParams.get("page") || "1"));
-  const all    = searchParams.get("all") === "1"; // bypass pagination for dropdowns
+  const search    = searchParams.get("search")    || "";
+  const rank      = searchParams.get("rank")      || "";
+  const status    = searchParams.get("status")    || "";
+  const managedBy = searchParams.get("managedBy") || "";
+  const page      = Math.max(1, parseInt(searchParams.get("page") || "1"));
+  const all       = searchParams.get("all") === "1";
 
   const where = {
     role: "DISTRIBUTOR" as const,
@@ -28,15 +29,16 @@ export async function GET(req: NextRequest) {
         { phone:    { contains: search, mode: "insensitive" as const } },
       ],
     }),
-    ...(rank   && { rank:   rank   as any }),
-    ...(status && { status: status as any }),
+    ...(rank      && { rank:      rank      as any }),
+    ...(status    && { status:    status    as any }),
+    ...(managedBy && { managedBy }),
   };
 
   if (all) {
     const members = await prisma.user.findMany({
       where,
       select: {
-        id: true, name: true, memberId: true, rank: true,
+        id: true, name: true, memberId: true, rank: true, phone: true,
         _count: { select: { downline: true } },
       },
       orderBy: { name: "asc" },
