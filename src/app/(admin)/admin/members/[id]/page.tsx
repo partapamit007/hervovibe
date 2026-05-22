@@ -336,6 +336,56 @@ export default function MemberDetailPage() {
         </CardContent>
       </Card>
 
+      {/* KYC & Identity */}
+      <Card className="mb-5">
+        <CardHeader>
+          <CardTitle className="text-sm">KYC &amp; Identity</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <p className="text-xs text-gray-500">PAN Number</p>
+              <p className="text-sm font-medium text-gray-800">{member.panNumber || "—"}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">Aadhaar Number</p>
+              <p className="text-sm font-medium text-gray-800">{member.aadhaarNumber || "—"}</p>
+            </div>
+          </div>
+          <div>
+            <p className="text-xs text-gray-500">Address</p>
+            <p className="text-sm font-medium text-gray-800 whitespace-pre-wrap">{member.address || "—"}</p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Bank Details */}
+      <Card className="mb-5">
+        <CardHeader>
+          <CardTitle className="text-sm">Bank / Payout Details</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <p className="text-xs text-gray-500">Bank Name</p>
+              <p className="text-sm font-medium text-gray-800">{member.bankName || "—"}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">Account Number</p>
+              <p className="text-sm font-medium text-gray-800">{member.bankAccount || "—"}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">IFSC Code</p>
+              <p className="text-sm font-medium text-gray-800">{member.ifscCode || "—"}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">UPI ID</p>
+              <p className="text-sm font-medium text-gray-800">{member.upiId || "—"}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle className="text-sm">Recent Sales</CardTitle>
