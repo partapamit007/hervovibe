@@ -27,7 +27,7 @@ interface PreviewMember {
   rank: string;
   ownSales: number;
   qualifiesForSalary: boolean;
-  zeroSalesDownline: number;
+  belowMinDownline: number;
   salaryBlocked: boolean;
   salary: number;
   businessCommission: number;
@@ -257,10 +257,10 @@ export default function PayoutsPage() {
                           <td className="py-2.5 px-2 text-right text-xs font-medium text-gray-800">
                             {m.salary > 0
                               ? `₹${m.salary.toLocaleString("en-IN")}`
-                              : m.salaryBlocked && m.zeroSalesDownline > 0
-                                ? <span className="text-red-500" title={`${m.zeroSalesDownline} downline member(s) with zero sales`}>Blocked ({m.zeroSalesDownline}⚠)</span>
+                              : m.salaryBlocked && m.belowMinDownline > 0
+                                ? <span className="text-red-500" title={`${m.belowMinDownline} downline member(s) below ₹1,800`}>Blocked ({m.belowMinDownline}⚠)</span>
                                 : m.salaryBlocked
-                                  ? <span className="text-amber-500">No min sales</span>
+                                  ? <span className="text-amber-500">Own &lt; ₹1,800</span>
                                   : <span className="text-gray-400">—</span>}
                           </td>
                           <td className="py-2.5 px-2 text-right text-xs text-blue-700 font-medium">
