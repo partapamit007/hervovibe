@@ -69,6 +69,7 @@ model User {
   biEntries     BIEntry[]
   payouts       PayoutRecord[]
   commissions   CommissionRecord[] @relation("EarnedCommissions")
+  rankHistory   RankHistory[]
 
   @@map("users")
 }
@@ -198,6 +199,7 @@ model BIEntry {
 model RankHistory {
   id        String   @id @default(cuid())
   memberId  String
+  member    User     @relation(fields: [memberId], references: [id])
   oldRank   Rank
   newRank   Rank
   month     Int
