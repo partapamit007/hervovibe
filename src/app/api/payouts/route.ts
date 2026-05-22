@@ -15,23 +15,28 @@ export async function POST(req: NextRequest) {
   const pi     = parseFloat(piAmount     || 0);
   const bi     = parseFloat(biAmount     || 0);
 
-  const payout = await prisma.payoutRecord.create({
-    data: {
-      memberId,
-      month: parseInt(month),
-      year:  parseInt(year),
-      salaryAmount: salary,
-      piAmount:     pi,
-      biAmount:     bi,
-      totalAmount:  salary + pi + bi,
-      paymentMode:  paymentMode  || null,
-      transactionRef: transactionRef || null,
-      notes:        notes || null,
-    },
-    include: { member: { select: { name: true, memberId: true } } },
-  });
-
-  return NextResponse.json(payout, { status: 201 });
+  try {
+    const payout = await prisma.payoutRecord.create({
+      data: {
+        memberId,
+        month: parseInt(month),
+        year:  parseInt(year),
+        salaryAmount: salary,
+        piAmount:     pi,
+        biAmount:     bi,
+        totalAmount:  salary + pi + bi,
+        paymentMode:  paymentMode  || null,
+        transactionRef: transactionRef || null,
+        notes:        notes || null,
+      },
+      include: { member: { select: { name: true, memberId: true } } },
+    });
+    return NextResponse.json(payout, { status: 201 });
+  } catch (e: any) {
+    if (e.code === "P2002")
+      return NextResponse.json({ error: "Payout already exists for this member and month" }, { status: 409 });
+    throw e;
+  }
 }
 
 export async function GET(req: NextRequest) {

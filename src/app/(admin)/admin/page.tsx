@@ -29,6 +29,14 @@ export default async function AdminDashboard() {
     return { month: d.getMonth() + 1, year: d.getFullYear() };
   }).reverse();
 
+  // Members with ₹0 sales this month = RED (at risk)
+  const membersWithSales = await prisma.sale.findMany({
+    where: { month, year, deletedAt: null },
+    select: { memberId: true },
+    distinct: ["memberId"],
+  });
+  const membersWithSalesIds = new Set(membersWithSales.map((s) => s.memberId));
+
   const [totalMembers, activeMembers, monthlySales, recentSales, recentMembers, trendData] =
     await Promise.all([
       prisma.user.count({ where: { role: "DISTRIBUTOR", deletedAt: null } }),
@@ -69,7 +77,7 @@ export default async function AdminDashboard() {
     ]);
 
   const totalSalesAmount = monthlySales._sum.amount || 0;
-  const inactiveCount = totalMembers - activeMembers;
+  const redCount = activeMembers - membersWithSalesIds.size; // active members with ₹0 sales this month
 
   const stats = [
     {
@@ -77,28 +85,25 @@ export default async function AdminDashboard() {
       value: totalMembers.toString(),
       icon: Users,
       iconBg: "bg-blue-500",
-      cardBg: "bg-blue-50",
     },
     {
       label: "Active Members",
       value: activeMembers.toString(),
       icon: Users,
       iconBg: "bg-green-500",
-      cardBg: "bg-green-50",
     },
     {
       label: "Sales This Month",
       value: `₹${totalSalesAmount.toLocaleString("en-IN")}`,
       icon: TrendingUp,
       iconBg: "bg-purple-500",
-      cardBg: "bg-purple-50",
     },
     {
-      label: "Inactive / At Risk",
-      value: inactiveCount.toString(),
+      label: "RED This Month",
+      value: redCount > 0 ? redCount.toString() : "0",
+      sublabel: "₹0 sales — salary at risk",
       icon: AlertTriangle,
-      iconBg: "bg-amber-500",
-      cardBg: "bg-amber-50",
+      iconBg: redCount > 0 ? "bg-red-500" : "bg-gray-400",
     },
   ];
 
@@ -129,6 +134,9 @@ export default async function AdminDashboard() {
               <div>
                 <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
                 <p className="text-sm text-gray-500">{stat.label}</p>
+                {"sublabel" in stat && stat.sublabel && (
+                  <p className="text-xs text-red-500 mt-0.5">{stat.sublabel}</p>
+                )}
               </div>
             </div>
           );

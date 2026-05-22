@@ -111,6 +111,8 @@ export async function DELETE(req: NextRequest) {
   const { id } = await req.json();
   if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
 
+  // Clean up commission records before deleting the sale
+  await prisma.commissionRecord.deleteMany({ where: { saleId: id } });
   await prisma.sale.delete({ where: { id } });
   return NextResponse.json({ ok: true });
 }

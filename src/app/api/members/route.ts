@@ -78,18 +78,25 @@ export async function GET(req: NextRequest) {
     prisma.user.count({ where }),
   ]);
 
-  const membersWithColor = members.map((m) => ({
+  const idColorParam = searchParams.get("idColor") || "";
+
+  let membersWithColor = members.map((m) => ({
     ...m,
     idColor: computeIdColor(m.salesEntries, curMonth, curYear),
     salesEntries: undefined,
   }));
 
+  // Filter by ID color client-side (color computed from sales, not stored in DB)
+  if (idColorParam) {
+    membersWithColor = membersWithColor.filter((m) => m.idColor === idColorParam);
+  }
+
   return NextResponse.json({
     members: membersWithColor,
-    total,
+    total: idColorParam ? membersWithColor.length : total,
     page,
     pageSize: PAGE_SIZE,
-    totalPages: Math.ceil(total / PAGE_SIZE),
+    totalPages: idColorParam ? Math.ceil(membersWithColor.length / PAGE_SIZE) : Math.ceil(total / PAGE_SIZE),
   });
 }
 

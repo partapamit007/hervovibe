@@ -105,6 +105,25 @@ export default async function MemberDashboard() {
   const piAmount     = piRate ? piPoints * piRate.ratePerPoint : 0;
   const totalEarned  = businessComm + piAmount + salary;
 
+  // Direct downline with their ID colors (so member can see who needs support)
+  const directDownline = await prisma.user.findMany({
+    where: { sponsorId: userId, deletedAt: null },
+    select: { id: true, name: true, memberId: true, rank: true },
+  });
+  const directIds = directDownline.map((d) => d.id);
+  const downlineSalesRaw = directIds.length > 0
+    ? await prisma.sale.findMany({
+        where: { memberId: { in: directIds }, OR: colorMonths },
+        select: { memberId: true, month: true, year: true, amount: true },
+      })
+    : [];
+
+  // Group sales by member for color computation
+  const downlineWithColors = directDownline.map((d) => {
+    const sales = downlineSalesRaw.filter((s) => s.memberId === d.id);
+    return { ...d, idColor: computeIdColor(sales, month, year) };
+  });
+
   const [teamSize, downlineSalesTotal] = await Promise.all([
     getDownlineCount(userId),
     getDownlineSales(userId, month, year),
@@ -239,6 +258,33 @@ export default async function MemberDashboard() {
               <div className="bg-green-500 h-2 rounded-full transition-all" style={{ width: `${rankProgress}%` }} />
             </div>
             <p className="text-xs text-gray-400 mt-1.5">{teamSize} of {nextTarget!.toLocaleString("en-IN")} members ({rankProgress}%)</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* My Team — direct downline with ID colors */}
+      {downlineWithColors.length > 0 && (
+        <Card className="mb-4">
+          <CardHeader className="pb-2 pt-3 px-4">
+            <CardTitle className="text-sm text-gray-700">My Direct Team — {monthNames[month - 1]} Status</CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-3">
+            <div className="space-y-1.5">
+              {downlineWithColors.map((d) => (
+                <div key={d.id} className="flex items-center gap-2.5 py-1">
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0 ${idColorStyles[d.idColor as keyof typeof idColorStyles]}`}>
+                    {d.idColor[0]}
+                  </div>
+                  <span className="text-sm text-gray-700 flex-1">{d.name}</span>
+                  {d.memberId && <span className="text-xs text-gray-400">{d.memberId}</span>}
+                </div>
+              ))}
+            </div>
+            {downlineWithColors.some((d) => d.idColor === "RED" || d.idColor === "BLACK") && (
+              <p className="text-xs text-amber-600 mt-3 bg-amber-50 px-3 py-2 rounded-lg">
+                ⚠ RED/BLACK members block your salary. Help them reach ₹1,800 sales this month.
+              </p>
+            )}
           </CardContent>
         </Card>
       )}

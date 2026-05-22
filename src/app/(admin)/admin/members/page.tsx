@@ -27,21 +27,23 @@ const statusColors: Record<string, string> = {
 };
 
 export default function MembersPage() {
-  const [members,    setMembers]    = useState<any[]>([]);
-  const [total,      setTotal]      = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
-  const [page,       setPage]       = useState(1);
-  const [search,     setSearch]     = useState("");
-  const [rankFilter, setRankFilter] = useState("");
-  const [loading,    setLoading]    = useState(true);
+  const [members,     setMembers]     = useState<any[]>([]);
+  const [total,       setTotal]       = useState(0);
+  const [totalPages,  setTotalPages]  = useState(1);
+  const [page,        setPage]        = useState(1);
+  const [search,      setSearch]      = useState("");
+  const [rankFilter,  setRankFilter]  = useState("");
+  const [colorFilter, setColorFilter] = useState("");
+  const [loading,     setLoading]     = useState(true);
 
-  useEffect(() => { fetchMembers(1); }, [search, rankFilter]);
+  useEffect(() => { fetchMembers(1); }, [search, rankFilter, colorFilter]);
 
   async function fetchMembers(p: number) {
     setLoading(true);
     const params = new URLSearchParams({ page: String(p) });
-    if (search)     params.set("search", search);
-    if (rankFilter) params.set("rank",   rankFilter);
+    if (search)      params.set("search",    search);
+    if (rankFilter)  params.set("rank",      rankFilter);
+    if (colorFilter) params.set("idColor",   colorFilter);
     const res  = await fetch(`/api/members?${params}`);
     const data = await res.json();
     setMembers(data.members ?? []);
@@ -72,13 +74,13 @@ export default function MembersPage() {
         </div>
       </div>
 
-      <div className="flex gap-3 mb-5">
+      <div className="flex gap-3 mb-3 flex-wrap">
         <input
           type="text"
           placeholder="Search name, ID, phone..."
           value={search}
           onChange={(e) => { setSearch(e.target.value); }}
-          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+          className="flex-1 min-w-[200px] px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
         />
         <select
           value={rankFilter}
@@ -90,6 +92,23 @@ export default function MembersPage() {
             <option key={r} value={r}>{r.replace(/_/g, " ")}</option>
           ))}
         </select>
+      </div>
+      {/* ID Color filter */}
+      <div className="flex gap-2 mb-5">
+        {(["", "GREEN", "YELLOW", "RED", "BLACK"] as const).map((c) => (
+          <button key={c} onClick={() => setColorFilter(c)}
+            className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+              colorFilter === c
+                ? c === ""        ? "bg-gray-800 text-white border-gray-800"
+                : c === "GREEN"   ? "bg-green-500 text-white border-green-500"
+                : c === "YELLOW"  ? "bg-yellow-400 text-yellow-900 border-yellow-400"
+                : c === "RED"     ? "bg-red-500 text-white border-red-500"
+                : "bg-gray-900 text-white border-gray-900"
+                : "bg-white text-gray-600 border-gray-300 hover:border-gray-400"
+            }`}>
+            {c === "" ? "All Colors" : c}
+          </button>
+        ))}
       </div>
 
       {loading ? (
