@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Badge } from "@/components/ui/badge";
@@ -48,7 +50,8 @@ const rankHeroColors: Record<string, string> = {
 
 export default async function RankPage() {
   const session = await auth();
-  const userId = session?.user?.id;
+  if (!session?.user?.id) return <div className="p-8 text-center text-red-500">Session error — please log in again.</div>;
+  const userId = session.user.id;
 
   const now = new Date();
   const month = now.getMonth() + 1;
@@ -65,24 +68,24 @@ export default async function RankPage() {
     }),
   ]);
 
-  const rank = member?.rank ?? session?.user?.rank ?? "DISTRIBUTOR";
+  const rank = member?.rank ?? "DISTRIBUTOR";
   const target = rankTargets[rank] ?? 1800;
   const currentSales = monthSalesAgg._sum.amount ?? 0;
   const progress = target > 0 ? Math.min((currentSales / target) * 100, 100) : 100;
   const currentRankIndex = rankOrder.indexOf(rank);
 
-  // Compute green (active) team size for rank promotion display
+  // Level-by-level BFS — 1 query per depth level, max 8
   const allDownlineIds: string[] = [];
   {
-    const queue = [userId!];
-    while (queue.length) {
-      const cur = queue.shift()!;
+    let level = [userId];
+    while (level.length) {
       const kids = await prisma.user.findMany({
-        where: { sponsorId: cur, deletedAt: null },
+        where: { sponsorId: { in: level }, deletedAt: null },
         select: { id: true },
       });
-      allDownlineIds.push(...kids.map(k => k.id));
-      queue.push(...kids.map(k => k.id));
+      const childIds = kids.map(k => k.id);
+      allDownlineIds.push(...childIds);
+      level = childIds;
     }
   }
   const teamSize = allDownlineIds.length;

@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,7 +13,8 @@ function fmt(n: number) {
 
 export default async function EarningsPage() {
   const session = await auth();
-  const userId = session?.user?.id!;
+  if (!session?.user?.id) return <div className="p-8 text-center text-red-500">Session error — please log in again.</div>;
+  const userId = session.user.id;
 
   const now = new Date();
   const month = now.getMonth() + 1;
