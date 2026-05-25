@@ -7,6 +7,7 @@ export const authConfig = {
   callbacks: {
     jwt({ token, user }: any) {
       if (user) {
+        token.id = user.id;
         token.role = user.role;
         token.rank = user.rank;
         token.memberId = user.memberId;
@@ -15,6 +16,7 @@ export const authConfig = {
     },
     session({ session, token }: any) {
       if (token) {
+        session.user.id = token.id;
         session.user.role = token.role;
         session.user.rank = token.rank;
         session.user.memberId = token.memberId;
