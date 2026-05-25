@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { auth } from "@/lib/auth";
@@ -44,7 +46,10 @@ async function getDownlineIds(memberId: string): Promise<string[]> {
 
 export default async function MemberDashboard() {
   const session = await auth();
-  const userId = session?.user?.id!;
+  if (!session?.user?.id) {
+    return <div className="p-8 text-center text-red-500">Session error — please log in again.</div>;
+  }
+  const userId = session.user.id;
 
   const now   = new Date();
   const month = now.getMonth() + 1;
