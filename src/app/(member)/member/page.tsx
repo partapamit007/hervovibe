@@ -26,17 +26,20 @@ const rankColors: Record<string, string> = {
 
 const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
-// Single recursive CTE — returns all downline IDs in one DB round-trip
+// Level-by-level BFS — 1 query per depth level (max 8), never 1 per node
 async function getDownlineIds(memberId: string): Promise<string[]> {
-  const rows = await prisma.$queryRaw<{ id: string }[]>`
-    WITH RECURSIVE dl AS (
-      SELECT id FROM users WHERE "sponsorId" = ${memberId} AND "deletedAt" IS NULL
-      UNION ALL
-      SELECT u.id FROM users u INNER JOIN dl ON u."sponsorId" = dl.id WHERE u."deletedAt" IS NULL
-    )
-    SELECT id FROM dl
-  `;
-  return rows.map((r) => r.id);
+  const allIds: string[] = [];
+  let currentLevel = [memberId];
+  while (currentLevel.length > 0) {
+    const children = await prisma.user.findMany({
+      where: { sponsorId: { in: currentLevel }, deletedAt: null },
+      select: { id: true },
+    });
+    const childIds = children.map((c) => c.id);
+    allIds.push(...childIds);
+    currentLevel = childIds;
+  }
+  return allIds;
 }
 
 export default async function MemberDashboard() {
