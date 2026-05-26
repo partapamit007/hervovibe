@@ -115,6 +115,13 @@ async function main() {
     joiningDate: new Date("2024-01-10"),
   });
 
+  // Personal sales for the golden member (current + 2 prior months)
+  const pm1 = prevMonth(MONTH, YEAR, 1);
+  const pm2 = prevMonth(MONTH, YEAR, 2);
+  await sale(golden.id, admin.id, MONTH, YEAR);
+  await sale(golden.id, admin.id, pm1.month, pm1.year);
+  await sale(golden.id, admin.id, pm2.month, pm2.year);
+
   const leafIds: string[] = [];
 
   for (let si = 0; si < 5; si++) {
