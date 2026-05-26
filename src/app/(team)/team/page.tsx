@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { auth } from "@/lib/auth";
@@ -17,7 +19,8 @@ const rankColors: Record<string, string> = {
 
 export default async function TeamDashboard() {
   const session = await auth();
-  const teamMemberId = session?.user?.id;
+  if (!session?.user?.id) return <div className="p-8 text-center text-red-500">Session error — please log in again.</div>;
+  const teamMemberId = session.user.id;
 
   const now = new Date();
   const month = now.getMonth() + 1;

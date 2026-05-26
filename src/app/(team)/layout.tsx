@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { auth } from "@/lib/auth";
 import TeamSidebar from "@/components/team/TeamSidebar";
 

@@ -134,6 +134,11 @@ async function main() {
       joiningDate: new Date("2024-03-01"),
     });
 
+    // Personal sales for this silver member
+    await sale(silver.id, admin.id, MONTH, YEAR);
+    await sale(silver.id, admin.id, pm1.month, pm1.year);
+    await sale(silver.id, admin.id, pm2.month, pm2.year);
+
     for (let bi = 0; bi < 5; bi++) {
       const bName = nextName();
       const bronze = await upsert({
@@ -143,6 +148,11 @@ async function main() {
         phone: nextPhone(), managedBy: tm1.id, sponsorId: silver.id,
         joiningDate: new Date("2024-05-01"),
       });
+
+      // Personal sales for this bronze member
+      await sale(bronze.id, admin.id, MONTH, YEAR);
+      await sale(bronze.id, admin.id, pm1.month, pm1.year);
+      await sale(bronze.id, admin.id, pm2.month, pm2.year);
 
       for (let di = 0; di < 5; di++) {
         const dName = nextName();
@@ -154,11 +164,7 @@ async function main() {
           joiningDate: new Date("2024-07-01"),
         });
         leafIds.push(dist.id);
-        // Current month ₹1,800 sale for each leaf distributor
         await sale(dist.id, admin.id, MONTH, YEAR);
-        // Last 2 months too (for chart data)
-        const pm1 = prevMonth(MONTH, YEAR, 1);
-        const pm2 = prevMonth(MONTH, YEAR, 2);
         await sale(dist.id, admin.id, pm1.month, pm1.year);
         await sale(dist.id, admin.id, pm2.month, pm2.year);
       }

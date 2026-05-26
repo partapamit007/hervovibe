@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import MemberBottomNav from "@/components/member/MemberBottomNav";
 import { auth } from "@/lib/auth";
 
