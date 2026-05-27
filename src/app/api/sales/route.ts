@@ -42,16 +42,21 @@ export async function POST(req: NextRequest) {
     if (parseFloat(amount || "0") > finalAmount) finalAmount = parseFloat(amount);
   }
 
-  if (!finalAmount)
-    return NextResponse.json({ error: "Amount or products required" }, { status: 400 });
+  if (!finalAmount || finalAmount <= 0)
+    return NextResponse.json({ error: "Amount must be greater than zero" }, { status: 400 });
+
+  const monthInt = parseInt(month);
+  const yearInt  = parseInt(year);
+  if (monthInt < 1 || monthInt > 12 || yearInt < 2020 || yearInt > 2100)
+    return NextResponse.json({ error: "Invalid month or year" }, { status: 400 });
 
   const sale = await prisma.sale.create({
     data: {
       memberId,
       enteredById: session.user.id,
       amount: finalAmount,
-      month: parseInt(month),
-      year: parseInt(year),
+      month: monthInt,
+      year: yearInt,
       invoiceUrl: invoiceUrl || null,
       notes: notes || null,
       ...(saleItems.length > 0 && {
@@ -84,6 +89,7 @@ export async function GET(req: NextRequest) {
 
   const sales = await prisma.sale.findMany({
     where: {
+      deletedAt: null,
       ...(month && year ? { month: parseInt(month), year: parseInt(year) } : {}),
       ...(effectiveMemberId ? { memberId: effectiveMemberId } : {}),
       ...(session.user.role !== "DISTRIBUTOR" &&
@@ -111,8 +117,8 @@ export async function DELETE(req: NextRequest) {
   const { id } = await req.json();
   if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
 
-  // Clean up commission records before deleting the sale
+  // Remove commission records (no deletedAt on CommissionRecord) then soft-delete the sale
   await prisma.commissionRecord.deleteMany({ where: { saleId: id } });
-  await prisma.sale.delete({ where: { id } });
+  await prisma.sale.update({ where: { id }, data: { deletedAt: new Date() } });
   return NextResponse.json({ ok: true });
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { RANK_MIN_TEAM } from "@/lib/rankEngine";
 
 const RANK_SALARY: Record<string, number> = {
   DISTRIBUTOR:   0,
@@ -65,13 +66,14 @@ export async function GET(req: NextRequest) {
     return total;
   }
 
-  // BFS: count downline members with sales < 1800 this month (salary blocker)
-  function countBelowMinDownline(id: string): number {
+  // BFS: count active downline members (≥₹1,800 own sales this month)
+  // Salary blocked if greenTeamSize < rank minimum — same condition as rank promotion.
+  function countGreenDownline(id: string): number {
     let count = 0;
     const queue = [...(children.get(id) ?? [])];
     while (queue.length) {
       const cur = queue.shift()!;
-      if ((salesByMember.get(cur) ?? 0) < 1800) count++;
+      if ((salesByMember.get(cur) ?? 0) >= 1800) count++;
       queue.push(...(children.get(cur) ?? []));
     }
     return count;
@@ -106,8 +108,9 @@ export async function GET(req: NextRequest) {
   const result = members.map((m) => {
     const ownSales            = salesByMember.get(m.id) ?? 0;
     const ownQualifies        = ownSales >= 1800;
-    const belowMinDownline    = countBelowMinDownline(m.id);
-    const salaryBlocked       = !ownQualifies || belowMinDownline > 0;
+    const greenTeamSize       = countGreenDownline(m.id);
+    const minTeamRequired     = RANK_MIN_TEAM[m.rank as keyof typeof RANK_MIN_TEAM] ?? 0;
+    const salaryBlocked       = !ownQualifies || greenTeamSize < minTeamRequired;
     const salary              = salaryBlocked ? 0 : (RANK_SALARY[m.rank] ?? 0);
     const comm                = commByMember.get(m.id) ?? { business: 0, pi: 0 };
     const groupVolume         = ownSales + getDownlineSales(m.id);
@@ -120,7 +123,8 @@ export async function GET(req: NextRequest) {
       rank:                 m.rank,
       ownSales,
       qualifiesForSalary:   ownQualifies,
-      belowMinDownline,
+      greenTeamSize,
+      minTeamRequired,
       salaryBlocked,
       salary,
       businessCommission:   parseFloat(comm.business.toFixed(2)),

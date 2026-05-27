@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { RANK_ORDER } from "@/lib/rankEngine";
 
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -42,6 +43,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     panNumber, aadhaarNumber, address,
     bankAccount, ifscCode, upiId, bankName,
   } = body;
+
+  // Ranks are permanent — prevent downgrade via API
+  if (rank !== undefined) {
+    const current = await prisma.user.findUnique({ where: { id }, select: { rank: true } });
+    if (current && RANK_ORDER.indexOf(rank) < RANK_ORDER.indexOf(current.rank)) {
+      return NextResponse.json({ error: "Rank cannot be downgraded — ranks are permanent" }, { status: 400 });
+    }
+  }
 
   // Guard against circular sponsorship (A sponsors B, B sponsors A)
   if (sponsorId && sponsorId !== id) {

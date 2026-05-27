@@ -17,11 +17,11 @@ export default async function MemberSalesPage() {
 
   const [allSales, thisMonthTotal] = await Promise.all([
     prisma.sale.findMany({
-      where: { memberId: userId },
+      where: { memberId: userId, deletedAt: null },
       orderBy: [{ year: "desc" }, { month: "desc" }],
     }),
     prisma.sale.aggregate({
-      where: { memberId: userId, month, year },
+      where: { memberId: userId, month, year, deletedAt: null },
       _sum: { amount: true },
     }),
   ]);
