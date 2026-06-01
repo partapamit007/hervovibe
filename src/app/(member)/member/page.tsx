@@ -8,8 +8,8 @@ import { computeIdColor, idColorStyles } from "@/lib/idColor";
 
 const RANK_ORDER = ["DISTRIBUTOR","BRONZE","SILVER","GOLDEN","DIAMOND","SUPER_DIAMOND","PLATINUM","CENTENNIAL"];
 const RANK_MIN_TEAM: Record<string, number> = {
-  DISTRIBUTOR: 0, BRONZE: 5, SILVER: 25, GOLDEN: 125,
-  DIAMOND: 625, SUPER_DIAMOND: 3125, PLATINUM: 15625, CENTENNIAL: 78125,
+  DISTRIBUTOR: 0, BRONZE: 6, SILVER: 36, GOLDEN: 216,
+  DIAMOND: 1296, SUPER_DIAMOND: 7776, PLATINUM: 46656, CENTENNIAL: 279936,
 };
 const RANK_SALARY: Record<string, number> = {
   DISTRIBUTOR: 0, BRONZE: 0, SILVER: 1000, GOLDEN: 5000,
@@ -80,7 +80,7 @@ export default async function MemberDashboard() {
 
   const rank     = member?.rank ?? "DISTRIBUTOR";
   const ownSales = thisMonthSales._sum.amount ?? 0;
-  const qualifies = ownSales >= 1800;
+  const qualifies = ownSales >= 1260;
   const salary    = qualifies ? (RANK_SALARY[rank] ?? 0) : 0;
   const idColor   = computeIdColor(colorSales, month, year);
 
@@ -112,7 +112,7 @@ export default async function MemberDashboard() {
       where: { memberId: { in: allDownlineIds }, month, year, deletedAt: null },
       _sum: { amount: true },
     });
-    greenTeamSize = greenRows.filter((r) => (r._sum.amount ?? 0) >= 1800).length;
+    greenTeamSize = greenRows.filter((r) => (r._sum.amount ?? 0) >= 1260).length;
   }
   const teamSize = allDownlineIds.length;
 
@@ -163,8 +163,8 @@ export default async function MemberDashboard() {
       >
         <span>
           {qualifies
-            ? "Min. ₹1,800 sales met — salary active ✓"
-            : `₹${(1800 - ownSales).toLocaleString("en-IN")} more needed to unlock salary`}
+            ? "Min. ₹1,260 sales met — salary active ✓"
+            : `₹${(1260 - ownSales).toLocaleString("en-IN")} more needed to unlock salary`}
         </span>
         {salary > 0 && (
           <span className="font-bold">₹{salary.toLocaleString("en-IN")}</span>
@@ -181,8 +181,8 @@ export default async function MemberDashboard() {
             <span className="text-xl font-bold text-green-600">
               ₹{ownSales.toLocaleString("en-IN")}
             </span>
-            <p className={`text-xs mt-0.5 ${ownSales >= 1800 ? "text-green-600" : "text-amber-500"}`}>
-              {ownSales >= 1800 ? "Target met ✓" : `₹${(1800 - ownSales).toLocaleString("en-IN")} to go`}
+            <p className={`text-xs mt-0.5 ${ownSales >= 1260 ? "text-green-600" : "text-amber-500"}`}>
+              {ownSales >= 1260 ? "Target met ✓" : `₹${(1260 - ownSales).toLocaleString("en-IN")} to go`}
             </p>
           </CardContent>
         </Card>
@@ -259,7 +259,7 @@ export default async function MemberDashboard() {
 
             {atRiskDirect.length > 0 && (
               <p className="text-xs text-amber-600 mt-3 bg-amber-50 px-3 py-2 rounded-lg">
-                ⚠ {atRiskDirect.length} member{atRiskDirect.length > 1 ? "s" : ""} haven't reached ₹1,800 this month — this blocks your salary.
+                ⚠ {atRiskDirect.length} member{atRiskDirect.length > 1 ? "s" : ""} haven't reached ₹1,260 this month — this blocks your salary.
               </p>
             )}
           </CardContent>

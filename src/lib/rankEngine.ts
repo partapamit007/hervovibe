@@ -8,13 +8,13 @@ const RANK_ORDER: Rank[] = [
 
 const RANK_MIN_TEAM: Record<Rank, number> = {
   DISTRIBUTOR:   0,
-  BRONZE:        5,
-  SILVER:        25,
-  GOLDEN:        125,
-  DIAMOND:       625,
-  SUPER_DIAMOND: 3125,
-  PLATINUM:      15625,
-  CENTENNIAL:    78125,
+  BRONZE:        6,
+  SILVER:        36,
+  GOLDEN:        216,
+  DIAMOND:       1296,
+  SUPER_DIAMOND: 7776,
+  PLATINUM:      46656,
+  CENTENNIAL:    279936,
 };
 
 export async function runRankEngine(month: number, year: number) {
@@ -23,7 +23,7 @@ export async function runRankEngine(month: number, year: number) {
     select: { id: true, rank: true, sponsorId: true },
   });
 
-  // Own sales for this month (required minimum: ₹1800 to qualify above DISTRIBUTOR)
+  // Own sales for this month (required minimum: ₹1260 to qualify above DISTRIBUTOR)
   const allSales = await prisma.sale.findMany({
     where: { month, year, deletedAt: null },
     select: { memberId: true, amount: true },
@@ -54,21 +54,21 @@ export async function runRankEngine(month: number, year: number) {
     return count;
   }
 
-  // Count only ACTIVE downline — members with ≥₹1,800 own sales this month.
+  // Count only ACTIVE downline — members with ≥₹1,260 own sales this month.
   // Rank promotion requires this count to meet the minimum, not just headcount.
   function countGreenDownline(id: string): number {
     let count = 0;
     const queue = [...(children.get(id) ?? [])];
     while (queue.length) {
       const cur = queue.shift()!;
-      if ((salesByMember.get(cur) ?? 0) >= 1800) count++;
+      if ((salesByMember.get(cur) ?? 0) >= 1260) count++;
       queue.push(...(children.get(cur) ?? []));
     }
     return count;
   }
 
   // Ranks are permanent — once achieved they are never taken away.
-  // Promotion requires BOTH: ≥ N active (GREEN, ≥₹1800) team members AND own sales ≥ ₹1800.
+  // Promotion requires BOTH: ≥ N active (GREEN, ≥₹1260) team members AND own sales ≥ ₹1260.
   function calcPromotedRank(userId: string, currentRank: Rank, greenTeamSize: number): Rank {
     const ownSales = salesByMember.get(userId) ?? 0;
     const currentIdx = RANK_ORDER.indexOf(currentRank);
@@ -76,7 +76,7 @@ export async function runRankEngine(month: number, year: number) {
 
     for (let i = currentIdx + 1; i < RANK_ORDER.length; i++) {
       const r = RANK_ORDER[i];
-      if (greenTeamSize >= RANK_MIN_TEAM[r] && ownSales >= 1800) {
+      if (greenTeamSize >= RANK_MIN_TEAM[r] && ownSales >= 1260) {
         promoted = r;
       } else {
         break; // ranks are progressive — if this one fails, higher ones will too
@@ -108,7 +108,7 @@ export async function runRankEngine(month: number, year: number) {
         newRank: c.newRank,
         month,
         year,
-        reason: `Promoted: ${c.greenTeamSize} active members (≥₹1800 each) of ${c.teamSize} total + own ₹1800 met`,
+        reason: `Promoted: ${c.greenTeamSize} active members (≥₹1260 each) of ${c.teamSize} total + own ₹1260 met`,
       })),
     });
   }

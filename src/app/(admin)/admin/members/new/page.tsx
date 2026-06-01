@@ -70,7 +70,7 @@ export default function AddMemberPage() {
       )}
 
       <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
-        ⚠️ Minimum monthly sale of <strong>₹1,800</strong> is mandatory to maintain active membership.
+        ⚠️ Minimum monthly sale of <strong>₹1,260</strong> is mandatory to maintain active membership.
       </div>
 
       <Card>
@@ -116,7 +116,7 @@ export default function AddMemberPage() {
                 onChange={e => setForm({ ...form, joiningDate: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
               />
-              <p className="text-xs text-gray-400 mt-1">First month sales of ₹1,800 must be recorded from this date</p>
+              <p className="text-xs text-gray-400 mt-1">First month sales of ₹1,260 must be recorded from this date</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Sponsor (Upline)</label>
@@ -128,7 +128,7 @@ export default function AddMemberPage() {
                 <option value="">— No sponsor —</option>
                 {sponsors.map((s: any) => {
                   const filled = s._count?.downline || 0;
-                  const label = filled >= 5 ? `✓ ${filled} members` : `${filled}/5 min`;
+                  const label = filled >= 6 ? `✓ ${filled} members` : `${filled}/6 min`;
                   return (
                     <option key={s.id} value={s.id}>
                       {s.name} ({s.memberId}) — {label}
@@ -136,7 +136,7 @@ export default function AddMemberPage() {
                   );
                 })}
               </select>
-              <p className="text-xs text-gray-400 mt-1">Minimum 5 direct members required for rank qualification</p>
+              <p className="text-xs text-gray-400 mt-1">Minimum 6 direct members required for rank qualification</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Assigned Team Member</label>

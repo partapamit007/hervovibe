@@ -150,8 +150,8 @@ export default function MembersPage() {
                           <Badge className={`text-xs ${rankColors[m.rank]}`}>{m.rank.replace(/_/g, " ")}</Badge>
                         </div>
                         <Badge className={`text-xs ${statusColors[m.status]}`}>{m.status}</Badge>
-                        <span className={`text-xs font-medium ${m._count.downline >= 5 ? "text-green-600" : m._count.downline > 0 ? "text-amber-600" : "text-gray-400"}`}>
-                          {m._count.downline >= 5 ? `✓ ${m._count.downline} members` : `${m._count.downline}/5 min`}
+                        <span className={`text-xs font-medium ${m._count.downline >= 6 ? "text-green-600" : m._count.downline > 0 ? "text-amber-600" : "text-gray-400"}`}>
+                          {m._count.downline >= 6 ? `✓ ${m._count.downline} members` : `${m._count.downline}/6 min`}
                         </span>
                       </div>
                     </div>

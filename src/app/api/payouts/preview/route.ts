@@ -66,14 +66,14 @@ export async function GET(req: NextRequest) {
     return total;
   }
 
-  // BFS: count active downline members (≥₹1,800 own sales this month)
+  // BFS: count active downline members (≥₹1,260 own sales this month)
   // Salary blocked if greenTeamSize < rank minimum — same condition as rank promotion.
   function countGreenDownline(id: string): number {
     let count = 0;
     const queue = [...(children.get(id) ?? [])];
     while (queue.length) {
       const cur = queue.shift()!;
-      if ((salesByMember.get(cur) ?? 0) >= 1800) count++;
+      if ((salesByMember.get(cur) ?? 0) >= 1260) count++;
       queue.push(...(children.get(cur) ?? []));
     }
     return count;
@@ -107,7 +107,7 @@ export async function GET(req: NextRequest) {
 
   const result = members.map((m) => {
     const ownSales            = salesByMember.get(m.id) ?? 0;
-    const ownQualifies        = ownSales >= 1800;
+    const ownQualifies        = ownSales >= 1260;
     const greenTeamSize       = countGreenDownline(m.id);
     const minTeamRequired     = RANK_MIN_TEAM[m.rank as keyof typeof RANK_MIN_TEAM] ?? 0;
     const salaryBlocked       = !ownQualifies || greenTeamSize < minTeamRequired;

@@ -21,7 +21,7 @@ export function computeIdColor(
   if (zeroStreak >= 3) return "BLACK";
 
   const current = monthAmount(forMonth, forYear);
-  if (current >= 1800) return "GREEN";
+  if (current >= 1260) return "GREEN";
   if (current > 0)    return "YELLOW";
   return "RED";
 }

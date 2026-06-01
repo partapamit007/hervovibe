@@ -8,8 +8,8 @@ import { Trophy, PlayCircle, CheckCircle, XCircle, ArrowUp, Lock } from "lucide-
 
 const RANK_ORDER = ["DISTRIBUTOR","BRONZE","SILVER","GOLDEN","DIAMOND","SUPER_DIAMOND","PLATINUM","CENTENNIAL"];
 const RANK_MIN_TEAM: Record<string, number> = {
-  DISTRIBUTOR: 0, BRONZE: 5, SILVER: 25, GOLDEN: 125,
-  DIAMOND: 625, SUPER_DIAMOND: 3125, PLATINUM: 15625, CENTENNIAL: 78125,
+  DISTRIBUTOR: 0, BRONZE: 6, SILVER: 36, GOLDEN: 216,
+  DIAMOND: 1296, SUPER_DIAMOND: 7776, PLATINUM: 46656, CENTENNIAL: 279936,
 };
 const RANK_SALARY: Record<string, string> = {
   DISTRIBUTOR: "—", BRONZE: "—", SILVER: "₹1,000", GOLDEN: "₹5,000",
@@ -68,7 +68,7 @@ export default function RanksPage() {
   }
 
   async function handleRun() {
-    if (!confirm(`Run rank engine for ${months[parseInt(month) - 1]} ${year}?\n\nThis will promote members who have met both:\n• Minimum team size for the next rank\n• ₹1,800+ own sales this month\n\nNo rank will be downgraded.`)) return;
+    if (!confirm(`Run rank engine for ${months[parseInt(month) - 1]} ${year}?\n\nThis will promote members who have met both:\n• Minimum team size for the next rank\n• ₹1,260+ own sales this month\n\nNo rank will be downgraded.`)) return;
     setRunning(true);
     setResult(null);
     setRunError("");
@@ -103,7 +103,7 @@ export default function RanksPage() {
 
       <div className="mb-6 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800 flex items-start gap-2">
         <Lock className="w-4 h-4 mt-0.5 shrink-0" />
-        <span><strong>Rank Rule:</strong> Once a member achieves a rank, it is permanent. Salary may be withheld if sales conditions aren't met that month, but the rank title stays. Promotion requires <strong>both</strong>: minimum team size AND ≥ ₹1,800 own sales that month.</span>
+        <span><strong>Rank Rule:</strong> Once a member achieves a rank, it is permanent. Salary may be withheld if sales conditions aren't met that month, but the rank title stays. Promotion requires <strong>both</strong>: minimum team size AND ≥ ₹1,260 own sales that month.</span>
       </div>
 
       {/* Rank Table */}
@@ -133,7 +133,7 @@ export default function RanksPage() {
                     <td className="py-2 text-right text-gray-600">
                       {RANK_MIN_TEAM[r] === 0 ? "—" : RANK_MIN_TEAM[r].toLocaleString("en-IN")}
                     </td>
-                    <td className="py-2 text-right text-gray-600">₹1,800</td>
+                    <td className="py-2 text-right text-gray-600">₹1,260</td>
                     <td className="py-2 text-right font-medium text-gray-800">{RANK_SALARY[r]}</td>
                   </tr>
                 ))}

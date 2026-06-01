@@ -7,18 +7,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle, Lock, Trophy } from "lucide-react";
 
 const RANK_MIN_TEAM_DISPLAY: Record<string, string> = {
-  DISTRIBUTOR: "—", BRONZE: "5", SILVER: "25", GOLDEN: "125",
-  DIAMOND: "625", SUPER_DIAMOND: "3,125", PLATINUM: "15,625", CENTENNIAL: "78,125",
+  DISTRIBUTOR: "—", BRONZE: "6", SILVER: "36", GOLDEN: "216",
+  DIAMOND: "1,296", SUPER_DIAMOND: "7,776", PLATINUM: "46,656", CENTENNIAL: "2,79,936",
 };
 
 const rankTargets: Record<string, number> = {
-  DISTRIBUTOR:   1800,
-  BRONZE:        9000,
-  SILVER:        45000,
-  GOLDEN:        225000,
-  DIAMOND:       1125000,
-  SUPER_DIAMOND: 5625000,
-  PLATINUM:      28125000,
+  DISTRIBUTOR:   1260,
+  BRONZE:        7560,
+  SILVER:        45360,
+  GOLDEN:        272160,
+  DIAMOND:       1632960,
+  SUPER_DIAMOND: 9797760,
+  PLATINUM:      58786560,
   CENTENNIAL:    0,
 };
 
@@ -69,7 +69,7 @@ export default async function RankPage() {
   ]);
 
   const rank = member?.rank ?? "DISTRIBUTOR";
-  const target = rankTargets[rank] ?? 1800;
+  const target = rankTargets[rank] ?? 1260;
   const currentSales = monthSalesAgg._sum.amount ?? 0;
   const progress = target > 0 ? Math.min((currentSales / target) * 100, 100) : 100;
   const currentRankIndex = rankOrder.indexOf(rank);
@@ -96,12 +96,12 @@ export default async function RankPage() {
       where: { memberId: { in: allDownlineIds }, month, year, deletedAt: null },
       _sum: { amount: true },
     });
-    greenTeamSize = downlineSales.filter(s => (s._sum.amount ?? 0) >= 1800).length;
+    greenTeamSize = downlineSales.filter(s => (s._sum.amount ?? 0) >= 1260).length;
   }
 
   const rankIdx = rankOrder.indexOf(rank);
   const nextRankName = rankIdx < rankOrder.length - 1 ? rankOrder[rankIdx + 1] : null;
-  const nextRankMin = nextRankName ? { DISTRIBUTOR: 0, BRONZE: 5, SILVER: 25, GOLDEN: 125, DIAMOND: 625, SUPER_DIAMOND: 3125, PLATINUM: 15625, CENTENNIAL: 78125 }[nextRankName] : null;
+  const nextRankMin = nextRankName ? { DISTRIBUTOR: 0, BRONZE: 6, SILVER: 36, GOLDEN: 216, DIAMOND: 1296, SUPER_DIAMOND: 7776, PLATINUM: 46656, CENTENNIAL: 279936 }[nextRankName] : null;
 
   return (
     <div className="max-w-lg mx-auto">
@@ -163,7 +163,7 @@ export default async function RankPage() {
               <div className="flex items-center justify-between">
                 <div className="flex-1 mr-3">
                   <span className="text-sm text-gray-600">Active team members</span>
-                  <p className="text-xs text-gray-400">Each must have ≥₹1,800 sales this month</p>
+                  <p className="text-xs text-gray-400">Each must have ≥₹1,260 sales this month</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-bold text-gray-900">{greenTeamSize} / {nextRankMin}</span>
@@ -175,12 +175,12 @@ export default async function RankPage() {
               <div className="flex items-center justify-between">
                 <div className="flex-1 mr-3">
                   <span className="text-sm text-gray-600">Your own sales this month</span>
-                  <p className="text-xs text-gray-400">You must also be active (≥₹1,800)</p>
+                  <p className="text-xs text-gray-400">You must also be active (≥₹1,260)</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-bold text-gray-900">₹{currentSales.toLocaleString("en-IN")}</span>
-                  <Badge className={`text-xs ${currentSales >= 1800 ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
-                    {currentSales >= 1800 ? "Met ✓" : `Need ₹${(1800 - currentSales).toLocaleString("en-IN")}`}
+                  <Badge className={`text-xs ${currentSales >= 1260 ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
+                    {currentSales >= 1260 ? "Met ✓" : `Need ₹${(1260 - currentSales).toLocaleString("en-IN")}`}
                   </Badge>
                 </div>
               </div>
@@ -257,7 +257,7 @@ export default async function RankPage() {
                         ? "Top rank — no further target"
                         : isAchieved
                         ? "Permanently achieved"
-                        : `Own ≥₹1,800 + ${RANK_MIN_TEAM_DISPLAY[r]} active team members (each ≥₹1,800)`}
+                        : `Own ≥₹1,260 + ${RANK_MIN_TEAM_DISPLAY[r]} active team members (each ≥₹1,260)`}
                     </p>
                   </div>
                 </div>

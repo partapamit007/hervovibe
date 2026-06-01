@@ -258,9 +258,9 @@ export default function PayoutsPage() {
                             {m.salary > 0
                               ? `₹${m.salary.toLocaleString("en-IN")}`
                               : m.salaryBlocked && m.belowMinDownline > 0
-                                ? <span className="text-red-500" title={`${m.belowMinDownline} downline member(s) below ₹1,800`}>Blocked ({m.belowMinDownline}⚠)</span>
+                                ? <span className="text-red-500" title={`${m.belowMinDownline} downline member(s) below ₹1,260`}>Blocked ({m.belowMinDownline}⚠)</span>
                                 : m.salaryBlocked
-                                  ? <span className="text-amber-500">Own &lt; ₹1,800</span>
+                                  ? <span className="text-amber-500">Own &lt; ₹1,260</span>
                                   : <span className="text-gray-400">—</span>}
                           </td>
                           <td className="py-2.5 px-2 text-right text-xs text-blue-700 font-medium">
