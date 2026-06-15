@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 
+// Business commission % by depth level (rank-gated)
 const DEPTH_PCT: Record<number, number> = {
   1: 0.04,
   2: 0.02,
@@ -20,6 +21,11 @@ const RANK_MAX_DEPTH: Record<string, number> = {
   PLATINUM:      6,
   CENTENNIAL:    7,
 };
+
+async function getBiBaseRate(): Promise<number> {
+  const config = await prisma.biConfig.findFirst();
+  return config ? config.baseRate / 100 : 0.01;
+}
 
 export async function calculateCommissions(saleId: string) {
   const sale = await prisma.sale.findUnique({
@@ -49,41 +55,64 @@ export async function calculateCommissions(saleId: string) {
     year: sale.year,
   };
 
-  // Seller's own 8% business commission
+  // 1. Seller's 8% BUSINESS commission
   records.push({ ...base, memberId: sale.memberId, type: "BUSINESS", amount: sale.amount * 0.08, depth: 0 });
 
-  // Seller's own PI (direct value)
+  // 2. PI = piRate% of MRP per product (default 10%)
+  let totalPI = 0;
+  let totalBIBase = 0;
   for (const item of sale.saleItems) {
-    if (item.product.piDirect > 0)
-      records.push({ ...base, memberId: sale.memberId, type: "PI", amount: item.quantity * item.product.piDirect, depth: 0 });
+    const piRate = (item.product?.piRate ?? 10) / 100;
+    const biRate = (item.product?.biRate ?? 1) / 100;
+    totalPI      += item.quantity * item.mrpAtSale * piRate;
+    totalBIBase  += item.quantity * item.mrpAtSale * biRate;
+  }
+  if (sale.saleItems.length === 0) {
+    const globalBiRate = await getBiBaseRate();
+    totalPI     = sale.amount * 0.10;
+    totalBIBase = sale.amount * globalBiRate;
+  }
+  if (totalPI >= 0.01) {
+    records.push({ ...base, memberId: sale.memberId, type: "PI", amount: parseFloat(totalPI.toFixed(2)), depth: 0 });
   }
 
-  // Walk up the sponsor chain (up to 7 levels)
-  let currentSponsorId = sale.member.sponsorId;
-  for (let depth = 1; depth <= 7 && currentSponsorId; depth++) {
-    const upline = await prisma.user.findUnique({ where: { id: currentSponsorId } });
+  // 3. Walk entire sponsor chain and collect upline
+  const uplineChain: { id: string; rank: string; sponsorId: string | null }[] = [];
+  let curSponsorId = sale.member.sponsorId;
+  while (curSponsorId) {
+    const upline = await prisma.user.findUnique({
+      where: { id: curSponsorId },
+      select: { id: true, rank: true, sponsorId: true },
+    });
     if (!upline) break;
+    uplineChain.push(upline);
+    curSponsorId = upline.sponsorId;
+  }
 
+  // 4. PI distributed equally among ALL upline members
+  if (totalPI >= 0.01 && uplineChain.length > 0) {
+    const piPerUpline = parseFloat((totalPI / uplineChain.length).toFixed(2));
+    uplineChain.forEach((u, idx) => {
+      records.push({ ...base, memberId: u.id, type: "PI", amount: piPerUpline, depth: idx + 1 });
+    });
+  }
+
+  // 5. BUSINESS (rank-gated) per upline level
+  uplineChain.forEach((upline, idx) => {
+    const depth = idx + 1;
     const maxDepth = RANK_MAX_DEPTH[upline.rank] ?? 0;
 
-    // Business commission — only if this upline's rank qualifies for this depth
     if (maxDepth >= depth && DEPTH_PCT[depth]) {
       records.push({ ...base, memberId: upline.id, type: "BUSINESS", amount: sale.amount * DEPTH_PCT[depth], depth });
     }
+  });
 
-    // PI upline — halves at each level going up
-    // L1 gets piUpline × 1, L2 gets × 0.5, L3 gets × 0.25, etc.
-    for (const item of sale.saleItems) {
-      if (item.product.piUpline > 0) {
-        const piAmount = item.quantity * item.product.piUpline * Math.pow(0.5, depth - 1);
-        if (piAmount >= 0.01)
-          records.push({ ...base, memberId: upline.id, type: "PI", amount: piAmount, depth });
-      }
-    }
-
-    // BI is manually decided by client — NOT auto-calculated per product
-
-    currentSponsorId = upline.sponsorId;
+  // 6. BI distributed equally among ALL upline members (same rule as PI)
+  if (totalBIBase >= 0.01 && uplineChain.length > 0) {
+    const biPerUpline = parseFloat((totalBIBase / uplineChain.length).toFixed(2));
+    uplineChain.forEach((u, idx) => {
+      records.push({ ...base, memberId: u.id, type: "BI", amount: biPerUpline, depth: idx + 1 });
+    });
   }
 
   if (records.length > 0) {
