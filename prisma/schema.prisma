@@ -3,7 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 enum Role {
@@ -68,6 +70,7 @@ model User {
   piEntries     PIEntry[]
   biEntries     BIEntry[]
   payouts       PayoutRecord[]
+  biPayouts     BiPayoutRecord[]
   commissions   CommissionRecord[] @relation("EarnedCommissions")
   rankHistory   RankHistory[]
 
@@ -97,8 +100,10 @@ model Product {
   id        String     @id @default(cuid())
   name      String
   mrp       Float
-  piDirect  Float      @default(0)  // PI points seller earns per unit
-  piUpline  Float      @default(0)  // PI points L1 sponsor earns; halves each level up
+  piRate    Float      @default(10)  // PI % of MRP — paid monthly to seller + upline split
+  biRate    Float      @default(1)   // BI base % of MRP at L1, halving each level — paid per admin schedule
+  piDirect  Float      @default(0)   // legacy, unused
+  piUpline  Float      @default(0)   // legacy, unused
   isActive  Boolean    @default(true)
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
@@ -195,6 +200,33 @@ model BIEntry {
   createdAt DateTime @default(now())
 
   @@map("bi_entries")
+}
+
+model BiPayoutRecord {
+  id             String   @id @default(cuid())
+  memberId       String
+  member         User     @relation(fields: [memberId], references: [id])
+  period         String
+  fromMonth      Int
+  fromYear       Int
+  toMonth        Int
+  toYear         Int
+  amount         Float
+  paymentMode    String?
+  transactionRef String?
+  notes          String?
+  paidAt         DateTime @default(now())
+  createdAt      DateTime @default(now())
+
+  @@map("bi_payout_records")
+}
+
+model BiConfig {
+  id        String   @id @default(cuid())
+  baseRate  Float    @default(1.0)
+  updatedAt DateTime @updatedAt
+
+  @@map("bi_config")
 }
 
 model RankHistory {
