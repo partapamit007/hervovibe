@@ -278,7 +278,7 @@ export default function IncentivesPage() {
                 <div className="text-purple-800 text-xs leading-relaxed">
                   <p className="font-semibold mb-0.5">Auto-calculated on every sale — no manual entry needed</p>
                   <p>
-                    Current formula: L1 = <strong>{baseRate}%</strong> of sale · L2 = <strong>{(baseRate / 2).toFixed(3)}%</strong> · L3 = <strong>{(baseRate / 4).toFixed(3)}%</strong> · keeps halving up the full chain.
+                    BI% of MRP per sale. Total BI amount split <strong>equally among all upline members</strong> — same rule as PI. Base rate: <strong>{baseRate}%</strong> of MRP.
                   </p>
                 </div>
               </div>
@@ -286,7 +286,7 @@ export default function IncentivesPage() {
               {!biRateEditing ? (
                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div>
-                    <p className="text-xs text-gray-500">Current BI Base Rate (Level 1)</p>
+                    <p className="text-xs text-gray-500">Current BI Base Rate</p>
                     <p className="text-2xl font-bold text-purple-700">{baseRate}%</p>
                   </div>
                   <Button variant="outline" onClick={() => { setBiRateInput(String(baseRate)); setBiRateEditing(true); }}>
