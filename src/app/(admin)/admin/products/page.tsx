@@ -90,7 +90,7 @@ export default function ProductsPage() {
             </div>
             <div>
               <p className="font-medium text-purple-700">BI — Business Incentive (Admin-scheduled)</p>
-              <p className="text-blue-700">BI% of MRP at L1, halving each level up the chain. Accumulated in member profile. Admin releases quarterly / half-yearly / yearly.</p>
+              <p className="text-blue-700">BI% of MRP per sale. All upline members split equally (same rule as PI). Accumulated in member profile. Admin releases quarterly / half-yearly / yearly.</p>
             </div>
           </div>
         </div>
@@ -196,7 +196,7 @@ export default function ProductsPage() {
                     <th className="text-right pb-2 font-medium px-3 text-green-700">PI %</th>
                     <th className="text-right pb-2 font-medium px-3 text-green-700">PI / unit</th>
                     <th className="text-right pb-2 font-medium px-3 text-purple-700">BI %</th>
-                    <th className="text-right pb-2 font-medium px-3 text-purple-700">BI L1 / unit</th>
+                    <th className="text-right pb-2 font-medium px-3 text-purple-700">BI / unit</th>
                     <th className="pb-2 w-16"></th>
                   </tr>
                 </thead>
