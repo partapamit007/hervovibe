@@ -89,11 +89,13 @@ export async function calculateCommissions(saleId: string) {
     curSponsorId = upline.sponsorId;
   }
 
-  // 4. PI distributed equally among ALL upline members
+  // 4. PI distributed equally among ALL upline members (remainder goes to last upline)
   if (totalPI >= 0.01 && uplineChain.length > 0) {
     const piPerUpline = parseFloat((totalPI / uplineChain.length).toFixed(2));
+    const piRemainder = parseFloat((totalPI - piPerUpline * uplineChain.length).toFixed(2));
     uplineChain.forEach((u, idx) => {
-      records.push({ ...base, memberId: u.id, type: "PI", amount: piPerUpline, depth: idx + 1 });
+      const isLast = idx === uplineChain.length - 1;
+      records.push({ ...base, memberId: u.id, type: "PI", amount: isLast ? piPerUpline + piRemainder : piPerUpline, depth: idx + 1 });
     });
   }
 
@@ -107,11 +109,13 @@ export async function calculateCommissions(saleId: string) {
     }
   });
 
-  // 6. BI distributed equally among ALL upline members (same rule as PI)
+  // 6. BI distributed equally among ALL upline members (same rule as PI, remainder to last)
   if (totalBIBase >= 0.01 && uplineChain.length > 0) {
     const biPerUpline = parseFloat((totalBIBase / uplineChain.length).toFixed(2));
+    const biRemainder = parseFloat((totalBIBase - biPerUpline * uplineChain.length).toFixed(2));
     uplineChain.forEach((u, idx) => {
-      records.push({ ...base, memberId: u.id, type: "BI", amount: biPerUpline, depth: idx + 1 });
+      const isLast = idx === uplineChain.length - 1;
+      records.push({ ...base, memberId: u.id, type: "BI", amount: isLast ? biPerUpline + biRemainder : biPerUpline, depth: idx + 1 });
     });
   }
 

@@ -404,6 +404,7 @@ export default function PayoutsPage() {
             <CardContent className="space-y-4">
               <p className="text-xs text-gray-500">
                 Select the period range, give it a label (e.g. "Q1 2026"), preview accumulated BI per member, then release.
+                Preview totals are based on auto-calculated BI commission records from sales — ensure all sales for the period are entered before releasing.
               </p>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Period Label</label>

@@ -160,7 +160,7 @@ export default function ProductsPage() {
                 </div>
                 {mrpVal > 0 && biVal > 0 && (
                   <p className="text-xs text-purple-600 mt-1">
-                    L1=₹{(mrpVal * biVal / 100).toFixed(2)} · L2=₹{(mrpVal * biVal / 200).toFixed(2)} · L3=₹{(mrpVal * biVal / 400).toFixed(2)} · ...
+                    = ₹{(mrpVal * biVal / 100).toFixed(2)} per unit — split equally among all upline
                   </p>
                 )}
               </div>

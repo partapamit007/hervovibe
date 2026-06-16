@@ -99,7 +99,7 @@ model Product {
   name      String
   mrp       Float
   piRate    Float      @default(10)  // PI % of MRP — paid monthly to seller + upline split
-  biRate    Float      @default(1)   // BI base % of MRP at L1, halving each level — paid per admin schedule
+  biRate    Float      @default(1)   // BI base % of MRP — split equally among all upline — paid per admin schedule
   piDirect  Float      @default(0)   // legacy, unused
   piUpline  Float      @default(0)   // legacy, unused
   isActive  Boolean    @default(true)

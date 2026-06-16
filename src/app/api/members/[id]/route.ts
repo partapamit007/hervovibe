@@ -44,10 +44,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     bankAccount, ifscCode, upiId, bankName, memberId,
   } = body;
 
-  // Ranks are permanent — prevent downgrade via API
+  // Ranks are permanent — prevent downgrade or invalid rank via API
   if (rank !== undefined) {
+    if (!RANK_ORDER.includes(rank as any))
+      return NextResponse.json({ error: "Invalid rank value" }, { status: 400 });
     const current = await prisma.user.findUnique({ where: { id }, select: { rank: true } });
-    if (current && RANK_ORDER.indexOf(rank) < RANK_ORDER.indexOf(current.rank)) {
+    if (current && RANK_ORDER.indexOf(rank as any) < RANK_ORDER.indexOf(current.rank)) {
       return NextResponse.json({ error: "Rank cannot be downgraded — ranks are permanent" }, { status: 400 });
     }
   }

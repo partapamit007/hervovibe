@@ -57,20 +57,44 @@ export async function GET(req: NextRequest) {
     colorMonths.push({ month: m, year: y });
   }
 
+  const idColorParam = searchParams.get("idColor") || "";
+
+  const memberSelect = {
+    id: true, name: true, email: true, phone: true,
+    memberId: true, rank: true, status: true, joiningDate: true,
+    sponsorId: true,
+    sponsor: { select: { name: true, memberId: true } },
+    _count: { select: { downline: true } },
+    salesEntries: {
+      where: { OR: colorMonths },
+      select: { month: true, year: true, amount: true },
+    },
+  };
+
+  // When filtering by idColor, fetch ALL members (color is computed, not stored in DB)
+  // then filter + paginate in memory to get correct counts.
+  if (idColorParam) {
+    const allMembers = await prisma.user.findMany({ where, select: memberSelect, orderBy: { joiningDate: "desc" } });
+    const allWithColor = allMembers.map((m) => ({
+      ...m,
+      idColor: computeIdColor(m.salesEntries, curMonth, curYear),
+      salesEntries: undefined,
+    }));
+    const filtered = allWithColor.filter((m) => m.idColor === idColorParam);
+    const start = (page - 1) * PAGE_SIZE;
+    return NextResponse.json({
+      members: filtered.slice(start, start + PAGE_SIZE),
+      total: filtered.length,
+      page,
+      pageSize: PAGE_SIZE,
+      totalPages: Math.ceil(filtered.length / PAGE_SIZE),
+    });
+  }
+
   const [members, total] = await Promise.all([
     prisma.user.findMany({
       where,
-      select: {
-        id: true, name: true, email: true, phone: true,
-        memberId: true, rank: true, status: true, joiningDate: true,
-        sponsorId: true,
-        sponsor: { select: { name: true, memberId: true } },
-        _count: { select: { downline: true } },
-        salesEntries: {
-          where: { OR: colorMonths },
-          select: { month: true, year: true, amount: true },
-        },
-      },
+      select: memberSelect,
       orderBy: { joiningDate: "desc" },
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
@@ -78,25 +102,18 @@ export async function GET(req: NextRequest) {
     prisma.user.count({ where }),
   ]);
 
-  const idColorParam = searchParams.get("idColor") || "";
-
-  let membersWithColor = members.map((m) => ({
+  const membersWithColor = members.map((m) => ({
     ...m,
     idColor: computeIdColor(m.salesEntries, curMonth, curYear),
     salesEntries: undefined,
   }));
 
-  // Filter by ID color client-side (color computed from sales, not stored in DB)
-  if (idColorParam) {
-    membersWithColor = membersWithColor.filter((m) => m.idColor === idColorParam);
-  }
-
   return NextResponse.json({
     members: membersWithColor,
-    total: idColorParam ? membersWithColor.length : total,
+    total,
     page,
     pageSize: PAGE_SIZE,
-    totalPages: idColorParam ? Math.ceil(membersWithColor.length / PAGE_SIZE) : Math.ceil(total / PAGE_SIZE),
+    totalPages: Math.ceil(total / PAGE_SIZE),
   });
 }
 

@@ -67,7 +67,9 @@ export async function POST(req: NextRequest) {
   });
 
   // Async commission calculation (don't block the response)
-  calculateCommissions(sale.id).catch(console.error);
+  calculateCommissions(sale.id).catch((err) => {
+    console.error(`[Commission] Failed for sale ${sale.id}:`, err);
+  });
 
   return NextResponse.json(sale, { status: 201 });
 }
@@ -117,8 +119,7 @@ export async function DELETE(req: NextRequest) {
   const { id } = await req.json();
   if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
 
-  // Remove commission records (no deletedAt on CommissionRecord) then soft-delete the sale
-  await prisma.commissionRecord.deleteMany({ where: { saleId: id } });
+  // Soft-delete the sale only — commission records are kept as permanent audit trail
   await prisma.sale.update({ where: { id }, data: { deletedAt: new Date() } });
   return NextResponse.json({ ok: true });
 }

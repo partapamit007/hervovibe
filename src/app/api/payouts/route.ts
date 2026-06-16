@@ -11,6 +11,11 @@ export async function POST(req: NextRequest) {
   if (!memberId || !month || !year)
     return NextResponse.json({ error: "memberId, month, year required" }, { status: 400 });
 
+  const monthInt = parseInt(month);
+  const yearInt  = parseInt(year);
+  if (monthInt < 1 || monthInt > 12 || yearInt < 2020 || yearInt > 2100)
+    return NextResponse.json({ error: "Invalid month or year" }, { status: 400 });
+
   const salary = parseFloat(salaryAmount || 0);
   const pi     = parseFloat(piAmount     || 0);
   const bi     = parseFloat(biAmount     || 0);
@@ -19,8 +24,8 @@ export async function POST(req: NextRequest) {
     const payout = await prisma.payoutRecord.create({
       data: {
         memberId,
-        month: parseInt(month),
-        year:  parseInt(year),
+        month: monthInt,
+        year:  yearInt,
         salaryAmount: salary,
         piAmount:     pi,
         biAmount:     bi,

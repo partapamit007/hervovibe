@@ -8,7 +8,7 @@ async function buildTree(userId: string, depth = 0): Promise<any> {
     where: { id: userId },
     select: {
       id: true, name: true, memberId: true, rank: true, status: true,
-      downline: { select: { id: true } },
+      downline: { where: { deletedAt: null }, select: { id: true } },
     },
   });
   if (!user) return null;
@@ -26,7 +26,7 @@ export async function GET() {
 
   // Get all root members (no sponsor)
   const roots = await prisma.user.findMany({
-    where: { role: "DISTRIBUTOR", sponsorId: null },
+    where: { role: "DISTRIBUTOR", sponsorId: null, deletedAt: null },
     select: { id: true },
   });
 

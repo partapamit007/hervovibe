@@ -13,11 +13,15 @@ export async function GET(req: NextRequest) {
   const year = searchParams.get("year");
   const type = searchParams.get("type");
 
+  const validTypes = ["BUSINESS", "PI", "BI"];
+  if (type && !validTypes.includes(type))
+    return NextResponse.json({ error: "Invalid commission type" }, { status: 400 });
+
   const records = await prisma.commissionRecord.findMany({
     where: {
       ...(memberId ? { memberId } : {}),
       ...(month && year ? { month: parseInt(month), year: parseInt(year) } : {}),
-      ...(type ? { type: type as any } : {}),
+      ...(type ? { type: type as "BUSINESS" | "PI" | "BI" } : {}),
     },
     include: {
       member: { select: { name: true, memberId: true } },

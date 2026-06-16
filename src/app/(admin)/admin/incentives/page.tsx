@@ -306,7 +306,7 @@ export default function IncentivesPage() {
                     />
                     {biRateInput && parseFloat(biRateInput) > 0 && (
                       <p className="text-xs text-purple-600 mt-1">
-                        Formula: L1={parseFloat(biRateInput).toFixed(2)}% · L2={( parseFloat(biRateInput)/2).toFixed(3)}% · L3={(parseFloat(biRateInput)/4).toFixed(3)}% · ...
+                        {parseFloat(biRateInput).toFixed(2)}% of MRP per sale — total BI split equally among all upline members
                       </p>
                     )}
                   </div>
