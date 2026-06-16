@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, XCircle, Trash2, Gift, TrendingUp, IndianRupee } from "lucide-react";
+import { CheckCircle, XCircle, TrendingUp, IndianRupee, Settings, Info } from "lucide-react";
 
 const months = [
   "January","February","March","April","May","June",
@@ -13,15 +13,13 @@ const months = [
 const currentYear = new Date().getFullYear();
 const years = Array.from({ length: 5 }, (_, i) => currentYear - i);
 
-interface Member { id: string; name: string; memberId: string; }
-interface PIEntry { id: string; amount: number; month: number; year: number; notes: string | null; member: { name: string; memberId: string }; }
-interface BIEntry { id: string; amount: number; period: string; notes: string | null; member: { name: string; memberId: string }; }
-interface PiRate { id: string; month: number; year: number; ratePerPoint: number; }
 interface CommissionRecord {
   id: string; type: string; amount: number; depth: number;
   month: number; year: number; fromMemberId: string;
   member: { name: string; memberId: string };
 }
+interface PiRate { id: string; month: number; year: number; ratePerPoint: number; }
+interface BiConfig { id: string; baseRate: number; }
 
 const commTypeColor: Record<string, string> = {
   BUSINESS: "bg-blue-100 text-blue-700",
@@ -32,116 +30,101 @@ const commTypeColor: Record<string, string> = {
 export default function IncentivesPage() {
   const now = new Date();
   const [tab, setTab] = useState<"pi" | "bi" | "pirate" | "commissions">("pi");
-  const [members, setMembers] = useState<Member[]>([]);
-  const [piEntries, setPiEntries] = useState<PIEntry[]>([]);
-  const [biEntries, setBiEntries] = useState<BIEntry[]>([]);
-  const [piRates, setPiRates] = useState<PiRate[]>([]);
-  const [commissions, setCommissions] = useState<CommissionRecord[]>([]);
-  const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
-  const [statusMsg, setStatusMsg] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [deleting, setDeleting] = useState<string | null>(null);
 
-  // PI form
-  const [piMember, setPiMember] = useState("");
-  const [piAmount, setPiAmount] = useState("");
+  // Commission records for PI / BI tabs
+  const [piRecords, setPiRecords] = useState<CommissionRecord[]>([]);
+  const [biRecords, setBiRecords] = useState<CommissionRecord[]>([]);
   const [piMonth, setPiMonth] = useState(String(now.getMonth() + 1));
-  const [piYear, setPiYear] = useState(String(now.getFullYear()));
-  const [piNotes, setPiNotes] = useState("");
+  const [piYear, setPiYear]   = useState(String(now.getFullYear()));
+  const [biMonth, setBiMonth] = useState(String(now.getMonth() + 1));
+  const [biYear, setBiYear]   = useState(String(now.getFullYear()));
 
-  // BI form
-  const [biMember, setBiMember] = useState("");
-  const [biAmount, setBiAmount] = useState("");
-  const [biPeriod, setBiPeriod] = useState("");
-  const [biNotes, setBiNotes] = useState("");
+  // BI Config
+  const [biConfig, setBiConfig]     = useState<BiConfig | null>(null);
+  const [biRateInput, setBiRateInput] = useState("");
+  const [biRateSaving, setBiRateSaving] = useState(false);
+  const [biRateEditing, setBiRateEditing] = useState(false);
 
   // PI Rate form
+  const [piRates, setPiRates]     = useState<PiRate[]>([]);
   const [rateMonth, setRateMonth] = useState(String(now.getMonth() + 1));
-  const [rateYear, setRateYear] = useState(String(now.getFullYear()));
+  const [rateYear, setRateYear]   = useState(String(now.getFullYear()));
   const [rateValue, setRateValue] = useState("");
+  const [rateLoading, setRateLoading] = useState(false);
+  const [deleting, setDeleting]   = useState<string | null>(null);
 
-  // Commission filters
+  // All commissions tab
+  const [commissions, setCommissions] = useState<CommissionRecord[]>([]);
   const [commMonth, setCommMonth] = useState(String(now.getMonth() + 1));
-  const [commYear, setCommYear] = useState(String(now.getFullYear()));
+  const [commYear, setCommYear]   = useState(String(now.getFullYear()));
 
-  useEffect(() => {
-    fetch("/api/members?all=1").then((r) => r.json()).then((d) => setMembers(Array.isArray(d) ? d : []));
-    loadPI();
-    loadBI();
-    loadPiRates();
-  }, []);
-
-  function loadPI() {
-    fetch("/api/incentives/pi").then((r) => r.json()).then((d) => setPiEntries(Array.isArray(d) ? d : []));
-  }
-  function loadBI() {
-    fetch("/api/incentives/bi").then((r) => r.json()).then((d) => setBiEntries(Array.isArray(d) ? d : []));
-  }
-  function loadPiRates() {
-    fetch("/api/pi-rate").then((r) => r.json()).then((d) => setPiRates(Array.isArray(d) ? d : []));
-  }
-  function loadCommissions(m: string, y: string) {
-    fetch(`/api/commissions?month=${m}&year=${y}`)
-      .then((r) => r.json())
-      .then((d) => setCommissions(Array.isArray(d) ? d : []));
-  }
+  const [status, setStatus]     = useState<"idle" | "success" | "error">("idle");
+  const [statusMsg, setStatusMsg] = useState("");
 
   function showStatus(type: "success" | "error", msg: string) {
     setStatus(type); setStatusMsg(msg);
     setTimeout(() => setStatus("idle"), 5000);
   }
 
-  async function handlePISubmit(e: React.FormEvent) {
-    e.preventDefault(); setLoading(true);
-    try {
-      const res = await fetch("/api/incentives/pi", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ memberId: piMember, amount: piAmount, month: piMonth, year: piYear, notes: piNotes }),
-      });
-      if (res.ok) { showStatus("success", "PI entry recorded."); setPiMember(""); setPiAmount(""); setPiNotes(""); loadPI(); }
-      else { const err = await res.json(); showStatus("error", err.error || "Failed"); }
-    } catch { showStatus("error", "Network error"); }
-    setLoading(false);
+  useEffect(() => {
+    loadBiConfig();
+    loadPiRates();
+    loadPiRecords();
+  }, []);
+
+  function loadPiRecords(m = piMonth, y = piYear) {
+    fetch(`/api/commissions?type=PI&month=${m}&year=${y}`)
+      .then((r) => r.json()).then((d) => setPiRecords(Array.isArray(d) ? d : []));
+  }
+  function loadBiRecords(m = biMonth, y = biYear) {
+    fetch(`/api/commissions?type=BI&month=${m}&year=${y}`)
+      .then((r) => r.json()).then((d) => setBiRecords(Array.isArray(d) ? d : []));
+  }
+  function loadBiConfig() {
+    fetch("/api/bi-config").then((r) => r.json()).then((d) => {
+      if (d && d.baseRate !== undefined) {
+        setBiConfig(d);
+        setBiRateInput(String(d.baseRate));
+      }
+    });
+  }
+  function loadPiRates() {
+    fetch("/api/pi-rate").then((r) => r.json()).then((d) => setPiRates(Array.isArray(d) ? d : []));
+  }
+  function loadCommissions(m: string, y: string) {
+    fetch(`/api/commissions?month=${m}&year=${y}`)
+      .then((r) => r.json()).then((d) => setCommissions(Array.isArray(d) ? d : []));
   }
 
-  async function handleBISubmit(e: React.FormEvent) {
-    e.preventDefault(); setLoading(true);
-    try {
-      const res = await fetch("/api/incentives/bi", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ memberId: biMember, amount: biAmount, period: biPeriod, notes: biNotes }),
-      });
-      if (res.ok) { showStatus("success", "BI entry recorded."); setBiMember(""); setBiAmount(""); setBiPeriod(""); setBiNotes(""); loadBI(); }
-      else { const err = await res.json(); showStatus("error", err.error || "Failed"); }
-    } catch { showStatus("error", "Network error"); }
-    setLoading(false);
+  async function saveBiRate() {
+    setBiRateSaving(true);
+    const res = await fetch("/api/bi-config", {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ baseRate: biRateInput }),
+    });
+    if (res.ok) {
+      const d = await res.json();
+      setBiConfig(d);
+      setBiRateEditing(false);
+      showStatus("success", `BI base rate updated to ${d.baseRate}%`);
+    } else {
+      const err = await res.json();
+      showStatus("error", err.error || "Failed to save");
+    }
+    setBiRateSaving(false);
   }
 
   async function handlePiRateSubmit(e: React.FormEvent) {
-    e.preventDefault(); setLoading(true);
-    try {
-      const res = await fetch("/api/pi-rate", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ month: rateMonth, year: rateYear, ratePerPoint: rateValue }),
-      });
-      if (res.ok) { showStatus("success", "PI rate saved."); setRateValue(""); loadPiRates(); }
-      else { const err = await res.json(); showStatus("error", err.error || "Failed"); }
-    } catch { showStatus("error", "Network error"); }
-    setLoading(false);
+    e.preventDefault(); setRateLoading(true);
+    const res = await fetch("/api/pi-rate", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ month: rateMonth, year: rateYear, ratePerPoint: rateValue }),
+    });
+    if (res.ok) { showStatus("success", "PI rate saved."); setRateValue(""); loadPiRates(); }
+    else { const err = await res.json(); showStatus("error", err.error || "Failed"); }
+    setRateLoading(false);
   }
 
-  async function deletePI(id: string) {
-    if (!confirm("Delete this PI entry?")) return;
-    setDeleting(id);
-    await fetch("/api/incentives/pi", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
-    loadPI(); setDeleting(null);
-  }
-  async function deleteBI(id: string) {
-    if (!confirm("Delete this BI entry?")) return;
-    setDeleting(id);
-    await fetch("/api/incentives/bi", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
-    loadBI(); setDeleting(null);
-  }
   async function deletePiRate(id: string) {
     if (!confirm("Delete this rate?")) return;
     setDeleting(id);
@@ -154,30 +137,51 @@ export default function IncentivesPage() {
       tab === t ? "border-green-600 text-green-700" : "border-transparent text-gray-500 hover:text-gray-700"
     }`;
 
-  // Group commissions by member for display
+  // Group commissions by member
   const commByMember = commissions.reduce<Record<string, { name: string; memberId: string; business: number; pi: number; bi: number; total: number }>>((acc, c) => {
     if (!acc[c.member.memberId]) acc[c.member.memberId] = { name: c.member.name, memberId: c.member.memberId, business: 0, pi: 0, bi: 0, total: 0 };
     if (c.type === "BUSINESS") acc[c.member.memberId].business += c.amount;
-    if (c.type === "PI") acc[c.member.memberId].pi += c.amount;
-    if (c.type === "BI") acc[c.member.memberId].bi += c.amount;
+    if (c.type === "PI")       acc[c.member.memberId].pi       += c.amount;
+    if (c.type === "BI")       acc[c.member.memberId].bi       += c.amount;
     acc[c.member.memberId].total += c.amount;
     return acc;
   }, {});
   const commSummary = Object.values(commByMember).sort((a, b) => b.total - a.total);
 
+  // Group PI records by member
+  const piByMember = piRecords.reduce<Record<string, { name: string; memberId: string; total: number; depth0: number }>>((acc, c) => {
+    const key = c.member.memberId;
+    if (!acc[key]) acc[key] = { name: c.member.name, memberId: key, total: 0, depth0: 0 };
+    acc[key].total += c.amount;
+    if (c.depth === 0) acc[key].depth0 += c.amount;
+    return acc;
+  }, {});
+  const piSummary = Object.values(piByMember).sort((a, b) => b.total - a.total);
+
+  // Group BI records by member
+  const biByMember = biRecords.reduce<Record<string, { name: string; memberId: string; total: number }>>((acc, c) => {
+    const key = c.member.memberId;
+    if (!acc[key]) acc[key] = { name: c.member.name, memberId: key, total: 0 };
+    acc[key].total += c.amount;
+    return acc;
+  }, {});
+  const biSummary = Object.values(biByMember).sort((a, b) => b.total - a.total);
+
+  const baseRate = biConfig?.baseRate ?? 1;
+
   return (
     <div className="max-w-3xl">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Incentives</h1>
-        <p className="text-sm text-gray-500 mt-0.5">Manage PI, BI, PI rates and view auto-commissions</p>
+        <p className="text-sm text-gray-500 mt-0.5">Auto-calculated PI &amp; BI from sales · Configure rates · View commissions</p>
       </div>
 
       <div className="flex border-b border-gray-200 mb-6 overflow-x-auto">
-        <button onClick={() => setTab("pi")} className={tabClass("pi")}>Product Incentive (PI)</button>
-        <button onClick={() => setTab("bi")} className={tabClass("bi")}>Business Incentive (BI)</button>
+        <button onClick={() => { setTab("pi"); loadPiRecords(); }} className={tabClass("pi")}>Product Incentive (PI)</button>
+        <button onClick={() => { setTab("bi"); loadBiRecords(); }} className={tabClass("bi")}>Business Incentive (BI)</button>
         <button onClick={() => setTab("pirate")} className={tabClass("pirate")}>PI Rate (₹/pt)</button>
         <button onClick={() => { setTab("commissions"); loadCommissions(commMonth, commYear); }} className={tabClass("commissions")}>
-          Commissions
+          All Commissions
         </button>
       </div>
 
@@ -195,144 +199,175 @@ export default function IncentivesPage() {
       {/* PI TAB */}
       {tab === "pi" && (
         <>
-          <Card className="mb-8">
-            <CardHeader><CardTitle className="text-base">Add PI Entry</CardTitle></CardHeader>
-            <CardContent>
-              <form onSubmit={handlePISubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Member</label>
-                  <select value={piMember} onChange={(e) => setPiMember(e.target.value)} required
-                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
-                    <option value="">Select a member...</option>
-                    {members.map((m) => <option key={m.id} value={m.id}>{m.name} ({m.memberId})</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Amount (₹)</label>
-                  <input type="number" min="0.01" step="0.01" value={piAmount} onChange={(e) => setPiAmount(e.target.value)} required
-                    placeholder="e.g. 500"
-                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Month</label>
-                    <select value={piMonth} onChange={(e) => setPiMonth(e.target.value)}
-                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
-                      {months.map((name, i) => <option key={i + 1} value={i + 1}>{name}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Year</label>
-                    <select value={piYear} onChange={(e) => setPiYear(e.target.value)}
-                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
-                      {years.map((y) => <option key={y} value={y}>{y}</option>)}
-                    </select>
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Notes (optional)</label>
-                  <input type="text" value={piNotes} onChange={(e) => setPiNotes(e.target.value)}
-                    placeholder="e.g. 500 units × ₹1.00"
-                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
-                </div>
-                <Button type="submit" disabled={loading} className="bg-green-600 hover:bg-green-700 text-white">
-                  {loading ? "Saving..." : "Record PI Entry"}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2"><Gift className="w-4 h-4 text-green-600" /> PI History</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {piEntries.length === 0 ? <p className="text-sm text-gray-400 text-center py-8">No PI entries yet</p> : (
+          <div className="flex gap-3 bg-green-50 border border-green-200 rounded-lg px-4 py-3 mb-6 text-sm">
+            <Info className="w-4 h-4 shrink-0 mt-0.5 text-green-600" />
+            <div className="text-green-800">
+              <p className="font-semibold mb-0.5">PI is auto-calculated on every sale</p>
+              <p className="text-xs leading-relaxed text-green-700">
+                PI = <strong>10% of MRP</strong> for each sale. The <strong>seller keeps the full PI amount</strong>. All upline members share an <strong>equal split</strong> of the same amount. No manual entry needed — records appear here automatically when sales are added.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex gap-3 mb-5 items-end">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Month</label>
+              <select value={piMonth} onChange={(e) => setPiMonth(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+                {months.map((name, i) => <option key={i + 1} value={i + 1}>{name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Year</label>
+              <select value={piYear} onChange={(e) => setPiYear(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+                {years.map((y) => <option key={y} value={y}>{y}</option>)}
+              </select>
+            </div>
+            <Button variant="outline" onClick={() => loadPiRecords(piMonth, piYear)} className="text-sm">Load</Button>
+          </div>
+
+          {piSummary.length === 0 ? (
+            <Card>
+              <CardContent className="py-10 text-center">
+                <TrendingUp className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                <p className="text-sm text-gray-400">No PI commissions for this period. Add sales to generate PI.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">PI Commissions — {months[parseInt(piMonth) - 1]} {piYear}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-xs text-gray-500 mb-3">{piSummary.length} members earned PI</p>
                 <div className="divide-y divide-gray-100">
-                  {piEntries.map((e) => (
-                    <div key={e.id} className="flex items-center justify-between py-3">
+                  {piSummary.map((m) => (
+                    <div key={m.memberId} className="py-3 flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium text-gray-900">{e.member.name}</p>
-                        <p className="text-xs text-gray-500">{e.member.memberId} · {months[e.month - 1]} {e.year}{e.notes && ` · ${e.notes}`}</p>
+                        <p className="text-sm font-semibold text-gray-900">{m.name}</p>
+                        <p className="text-xs text-gray-500">
+                          [{m.memberId}]
+                          {m.depth0 > 0 && <span className="ml-2 text-green-600">Direct: ₹{m.depth0.toFixed(2)}</span>}
+                          {m.total - m.depth0 > 0 && <span className="ml-2 text-blue-600">Upline split: ₹{(m.total - m.depth0).toFixed(2)}</span>}
+                        </p>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-sm font-bold text-green-600">₹{e.amount.toLocaleString("en-IN")}</span>
-                        <button onClick={() => deletePI(e.id)} disabled={deleting === e.id} className="text-gray-400 hover:text-red-500">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
+                      <span className="text-sm font-bold text-green-700">₹{m.total.toFixed(2)}</span>
                     </div>
                   ))}
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
         </>
       )}
 
       {/* BI TAB */}
       {tab === "bi" && (
         <>
-          <Card className="mb-8">
-            <CardHeader><CardTitle className="text-base">Add BI Entry</CardTitle></CardHeader>
-            <CardContent>
-              <form onSubmit={handleBISubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Member</label>
-                  <select value={biMember} onChange={(e) => setBiMember(e.target.value)} required
-                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
-                    <option value="">Select a member...</option>
-                    {members.map((m) => <option key={m.id} value={m.id}>{m.name} ({m.memberId})</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Amount (₹)</label>
-                  <input type="number" min="1" value={biAmount} onChange={(e) => setBiAmount(e.target.value)} required
-                    placeholder="e.g. 10000"
-                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Period</label>
-                  <input type="text" value={biPeriod} onChange={(e) => setBiPeriod(e.target.value)} required
-                    placeholder="e.g. Q1 2026, Jan–Jun 2026, FY 2026"
-                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Notes (optional)</label>
-                  <input type="text" value={biNotes} onChange={(e) => setBiNotes(e.target.value)}
-                    placeholder="e.g. 25% quarterly bonus"
-                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
-                </div>
-                <Button type="submit" disabled={loading} className="bg-green-600 hover:bg-green-700 text-white">
-                  {loading ? "Saving..." : "Record BI Entry"}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-          <Card>
+          {/* BI Rate Config */}
+          <Card className="mb-6">
             <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2"><Gift className="w-4 h-4 text-purple-600" /> BI History</CardTitle>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Settings className="w-4 h-4 text-purple-600" /> BI Formula Configuration
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              {biEntries.length === 0 ? <p className="text-sm text-gray-400 text-center py-8">No BI entries yet</p> : (
-                <div className="divide-y divide-gray-100">
-                  {biEntries.map((e) => (
-                    <div key={e.id} className="flex items-center justify-between py-3">
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{e.member.name}</p>
-                        <p className="text-xs text-gray-500">{e.member.memberId} · {e.period}{e.notes && ` · ${e.notes}`}</p>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-sm font-bold text-purple-600">₹{e.amount.toLocaleString("en-IN")}</span>
-                        <button onClick={() => deleteBI(e.id)} disabled={deleting === e.id} className="text-gray-400 hover:text-red-500">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+              <div className="flex gap-3 bg-purple-50 border border-purple-200 rounded-lg px-4 py-3 mb-4 text-sm">
+                <Info className="w-4 h-4 shrink-0 mt-0.5 text-purple-500" />
+                <div className="text-purple-800 text-xs leading-relaxed">
+                  <p className="font-semibold mb-0.5">Auto-calculated on every sale — no manual entry needed</p>
+                  <p>
+                    Current formula: L1 = <strong>{baseRate}%</strong> of sale · L2 = <strong>{(baseRate / 2).toFixed(3)}%</strong> · L3 = <strong>{(baseRate / 4).toFixed(3)}%</strong> · keeps halving up the full chain.
+                  </p>
+                </div>
+              </div>
+
+              {!biRateEditing ? (
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div>
+                    <p className="text-xs text-gray-500">Current BI Base Rate (Level 1)</p>
+                    <p className="text-2xl font-bold text-purple-700">{baseRate}%</p>
+                  </div>
+                  <Button variant="outline" onClick={() => { setBiRateInput(String(baseRate)); setBiRateEditing(true); }}>
+                    Change Rate
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-end gap-3">
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">New Base Rate (%)</label>
+                    <input
+                      type="number" min="0.01" max="100" step="0.01"
+                      value={biRateInput}
+                      onChange={(e) => setBiRateInput(e.target.value)}
+                      placeholder="e.g. 1"
+                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                    {biRateInput && parseFloat(biRateInput) > 0 && (
+                      <p className="text-xs text-purple-600 mt-1">
+                        Formula: L1={parseFloat(biRateInput).toFixed(2)}% · L2={( parseFloat(biRateInput)/2).toFixed(3)}% · L3={(parseFloat(biRateInput)/4).toFixed(3)}% · ...
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex gap-2 pb-0.5">
+                    <Button onClick={saveBiRate} disabled={biRateSaving} className="bg-purple-600 hover:bg-purple-700 text-white">
+                      {biRateSaving ? "Saving..." : "Save"}
+                    </Button>
+                    <Button variant="outline" onClick={() => setBiRateEditing(false)}>Cancel</Button>
+                  </div>
                 </div>
               )}
             </CardContent>
           </Card>
+
+          {/* BI Commission History */}
+          <div className="flex gap-3 mb-5 items-end">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Month</label>
+              <select value={biMonth} onChange={(e) => setBiMonth(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+                {months.map((name, i) => <option key={i + 1} value={i + 1}>{name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Year</label>
+              <select value={biYear} onChange={(e) => setBiYear(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+                {years.map((y) => <option key={y} value={y}>{y}</option>)}
+              </select>
+            </div>
+            <Button variant="outline" onClick={() => loadBiRecords(biMonth, biYear)} className="text-sm">Load</Button>
+          </div>
+
+          {biSummary.length === 0 ? (
+            <Card>
+              <CardContent className="py-10 text-center">
+                <TrendingUp className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                <p className="text-sm text-gray-400">No BI commissions for this period. Add sales to generate BI.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">BI Commissions — {months[parseInt(biMonth) - 1]} {biYear}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-xs text-gray-500 mb-3">{biSummary.length} members earned BI</p>
+                <div className="divide-y divide-gray-100">
+                  {biSummary.map((m) => (
+                    <div key={m.memberId} className="py-3 flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900">{m.name}</p>
+                        <p className="text-xs text-gray-500">[{m.memberId}]</p>
+                      </div>
+                      <span className="text-sm font-bold text-purple-700">₹{m.total.toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </>
       )}
 
@@ -373,16 +408,14 @@ export default function IncentivesPage() {
                     placeholder="e.g. 2.00"
                     className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
                 </div>
-                <Button type="submit" disabled={loading} className="bg-green-600 hover:bg-green-700 text-white">
-                  {loading ? "Saving..." : "Save Rate"}
+                <Button type="submit" disabled={rateLoading} className="bg-green-600 hover:bg-green-700 text-white">
+                  {rateLoading ? "Saving..." : "Save Rate"}
                 </Button>
               </form>
             </CardContent>
           </Card>
           <Card>
-            <CardHeader>
-              <CardTitle className="text-base">PI Rate History</CardTitle>
-            </CardHeader>
+            <CardHeader><CardTitle className="text-base">PI Rate History</CardTitle></CardHeader>
             <CardContent>
               {piRates.length === 0 ? <p className="text-sm text-gray-400 text-center py-8">No rates set yet</p> : (
                 <div className="divide-y divide-gray-100">
@@ -392,7 +425,7 @@ export default function IncentivesPage() {
                       <div className="flex items-center gap-3">
                         <span className="text-sm font-bold text-green-700">₹{r.ratePerPoint}/pt</span>
                         <button onClick={() => deletePiRate(r.id)} disabled={deleting === r.id} className="text-gray-400 hover:text-red-500">
-                          <Trash2 className="w-4 h-4" />
+                          ✕
                         </button>
                       </div>
                     </div>
@@ -404,7 +437,7 @@ export default function IncentivesPage() {
         </>
       )}
 
-      {/* COMMISSIONS TAB */}
+      {/* ALL COMMISSIONS TAB */}
       {tab === "commissions" && (
         <>
           <div className="flex gap-3 mb-5 items-end">
@@ -422,21 +455,19 @@ export default function IncentivesPage() {
                 {years.map((y) => <option key={y} value={y}>{y}</option>)}
               </select>
             </div>
-            <Button variant="outline" onClick={() => loadCommissions(commMonth, commYear)} className="text-sm">
-              Load
-            </Button>
+            <Button variant="outline" onClick={() => loadCommissions(commMonth, commYear)} className="text-sm">Load</Button>
           </div>
 
           {commissions.length === 0 ? (
             <Card>
               <CardContent className="py-10 text-center">
                 <TrendingUp className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                <p className="text-sm text-gray-400">No commissions found for this period</p>
+                <p className="text-sm text-gray-400">No commissions for this period</p>
               </CardContent>
             </Card>
           ) : (
             <>
-              <p className="text-xs text-gray-500 mb-3">{commSummary.length} members earned commissions · {commissions.length} records total</p>
+              <p className="text-xs text-gray-500 mb-3">{commSummary.length} members · {commissions.length} records</p>
               <Card>
                 <CardContent className="pt-4">
                   <div className="divide-y divide-gray-100">
@@ -445,20 +476,14 @@ export default function IncentivesPage() {
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="text-sm font-semibold text-gray-900">{m.name}</p>
-                            <p className="text-xs text-gray-500">{m.memberId}</p>
+                            <p className="text-xs text-gray-500">[{m.memberId}]</p>
                           </div>
                           <span className="text-sm font-bold text-green-700">₹{m.total.toFixed(2)}</span>
                         </div>
-                        <div className="flex gap-2 mt-1.5">
-                          {m.business > 0 && (
-                            <Badge className="text-xs bg-blue-100 text-blue-700">Business ₹{m.business.toFixed(2)}</Badge>
-                          )}
-                          {m.pi > 0 && (
-                            <Badge className="text-xs bg-green-100 text-green-700">PI ₹{m.pi.toFixed(2)}</Badge>
-                          )}
-                          {m.bi > 0 && (
-                            <Badge className="text-xs bg-purple-100 text-purple-700">BI ₹{m.bi.toFixed(2)}</Badge>
-                          )}
+                        <div className="flex gap-2 mt-1.5 flex-wrap">
+                          {m.business > 0 && <Badge className="text-xs bg-blue-100 text-blue-700">Business ₹{m.business.toFixed(2)}</Badge>}
+                          {m.pi > 0 && <Badge className="text-xs bg-green-100 text-green-700">PI ₹{m.pi.toFixed(2)}</Badge>}
+                          {m.bi > 0 && <Badge className="text-xs bg-purple-100 text-purple-700">BI ₹{m.bi.toFixed(2)}</Badge>}
                         </div>
                       </div>
                     ))}

@@ -108,10 +108,18 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const { name, email, phone, sponsorId, managedBy, joiningDate,
           panNumber, aadhaarNumber, address,
-          bankName, bankAccount, ifscCode, upiId } = body;
+          bankName, bankAccount, ifscCode, upiId,
+          memberId: customMemberId } = body;
 
-  const count = await prisma.user.count({ where: { role: "DISTRIBUTOR" } });
-  const memberId = `HV-${String(count + 100).padStart(4, "0")}`;
+  let memberId: string;
+  if (customMemberId && customMemberId.trim()) {
+    const existing = await prisma.user.findFirst({ where: { memberId: customMemberId.trim() } });
+    if (existing) return NextResponse.json({ error: "Member ID already in use" }, { status: 400 });
+    memberId = customMemberId.trim();
+  } else {
+    const count = await prisma.user.count({ where: { role: "DISTRIBUTOR" } });
+    memberId = `HV-${String(count + 100).padStart(4, "0")}`;
+  }
   const chars = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
   const tempPwd = "Hv@" + Array.from({ length: 7 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
   const password = await bcrypt.hash(tempPwd, 10);

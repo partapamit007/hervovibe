@@ -10,6 +10,7 @@ export default function AddMemberPage() {
   const today = new Date().toISOString().split("T")[0];
   const [form, setForm] = useState({
     name: "", email: "", phone: "",
+    memberId: "",
     sponsorId: "", managedBy: "",
     joiningDate: today,
     panNumber: "", aadhaarNumber: "", address: "",
@@ -17,6 +18,7 @@ export default function AddMemberPage() {
   });
   const [sponsors, setSponsors] = useState<any[]>([]);
   const [teamMembers, setTeamMembers] = useState<any[]>([]);
+  const [sponsorSearch, setSponsorSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [tempPassword, setTempPassword] = useState("");
@@ -80,6 +82,16 @@ export default function AddMemberPage() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Member ID</label>
+              <input
+                value={form.memberId}
+                onChange={e => setForm({ ...form, memberId: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                placeholder="HV-0100 (auto-generated if empty)"
+              />
+              <p className="text-xs text-gray-400 mt-1">Leave empty to auto-generate</p>
+            </div>
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
               <input
                 required
@@ -120,21 +132,34 @@ export default function AddMemberPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Sponsor (Upline)</label>
+              <input
+                type="text"
+                value={sponsorSearch}
+                onChange={e => setSponsorSearch(e.target.value)}
+                placeholder="Search by ID or name..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-t-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500 border-b-0"
+              />
               <select
                 value={form.sponsorId}
                 onChange={e => setForm({ ...form, sponsorId: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                size={5}
+                className="w-full px-3 py-2 border border-gray-300 rounded-b-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
               >
                 <option value="">— No sponsor —</option>
-                {sponsors.map((s: any) => {
-                  const filled = s._count?.downline || 0;
-                  const label = filled >= 6 ? `✓ ${filled} members` : `${filled}/6 min`;
-                  return (
-                    <option key={s.id} value={s.id}>
-                      {s.name} ({s.memberId}) — {label}
-                    </option>
-                  );
-                })}
+                {sponsors
+                  .filter((s: any) => {
+                    const q = sponsorSearch.toLowerCase();
+                    return !q || s.memberId?.toLowerCase().includes(q) || s.name?.toLowerCase().includes(q);
+                  })
+                  .map((s: any) => {
+                    const filled = s._count?.downline || 0;
+                    const label = filled >= 6 ? `✓ ${filled} members` : `${filled}/6 min`;
+                    return (
+                      <option key={s.id} value={s.id}>
+                        [{s.memberId}] — {s.name} ({label})
+                      </option>
+                    );
+                  })}
               </select>
               <p className="text-xs text-gray-400 mt-1">Minimum 6 direct members required for rank qualification</p>
             </div>

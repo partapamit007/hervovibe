@@ -15,16 +15,16 @@ export async function POST(req: NextRequest) {
   if (!session || session.user.role !== "MASTER_ADMIN")
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { name, mrp, piDirect, piUpline } = await req.json();
+  const { name, mrp, piRate, biRate } = await req.json();
   if (!name || !mrp)
     return NextResponse.json({ error: "Name and MRP are required" }, { status: 400 });
 
   const product = await prisma.product.create({
     data: {
       name,
-      mrp: parseFloat(mrp),
-      piDirect: parseFloat(piDirect || "0"),
-      piUpline: parseFloat(piUpline || "0"),
+      mrp:    parseFloat(mrp),
+      piRate: parseFloat(piRate ?? "10"),
+      biRate: parseFloat(biRate ?? "1"),
     },
   });
   return NextResponse.json(product, { status: 201 });
@@ -35,16 +35,16 @@ export async function PATCH(req: NextRequest) {
   if (!session || session.user.role !== "MASTER_ADMIN")
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { id, name, mrp, piDirect, piUpline, isActive } = await req.json();
+  const { id, name, mrp, piRate, biRate, isActive } = await req.json();
   if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
 
   const product = await prisma.product.update({
     where: { id },
     data: {
       ...(name     !== undefined && { name }),
-      ...(mrp      !== undefined && { mrp: parseFloat(mrp) }),
-      ...(piDirect !== undefined && { piDirect: parseFloat(piDirect) }),
-      ...(piUpline !== undefined && { piUpline: parseFloat(piUpline) }),
+      ...(mrp      !== undefined && { mrp:    parseFloat(mrp) }),
+      ...(piRate   !== undefined && { piRate: parseFloat(piRate) }),
+      ...(biRate   !== undefined && { biRate: parseFloat(biRate) }),
       ...(isActive !== undefined && { isActive }),
     },
   });

@@ -12,7 +12,7 @@ const RANK_MIN_TEAM: Record<string, number> = {
   DIAMOND: 1296, SUPER_DIAMOND: 7776, PLATINUM: 46656, CENTENNIAL: 279936,
 };
 const RANK_SALARY: Record<string, string> = {
-  DISTRIBUTOR: "—", BRONZE: "—", SILVER: "₹1,000", GOLDEN: "₹5,000",
+  DISTRIBUTOR: "—", BRONZE: "₹500", SILVER: "₹1,000", GOLDEN: "₹5,000",
   DIAMOND: "₹15,000", SUPER_DIAMOND: "₹30,000", PLATINUM: "₹75,000", CENTENNIAL: "₹1,00,000",
 };
 const rankColors: Record<string, string> = {

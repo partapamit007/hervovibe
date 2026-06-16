@@ -5,7 +5,7 @@ import { RANK_MIN_TEAM } from "@/lib/rankEngine";
 
 const RANK_SALARY: Record<string, number> = {
   DISTRIBUTOR:   0,
-  BRONZE:        0,
+  BRONZE:        500,
   SILVER:        1000,
   GOLDEN:        5000,
   DIAMOND:       15000,
@@ -79,12 +79,7 @@ export async function GET(req: NextRequest) {
     return count;
   }
 
-  // PI rate for this month
-  const piRate = await prisma.piRate.findUnique({
-    where: { month_year: { month, year } },
-  });
-
-  // Commissions for this month (all members)
+  // Commissions for this month — BI excluded (paid separately via BI Release)
   const commissions = await prisma.commissionRecord.findMany({
     where: { month, year },
     select: { memberId: true, type: true, amount: true },
@@ -96,6 +91,7 @@ export async function GET(req: NextRequest) {
     const rec = commByMember.get(c.memberId)!;
     if (c.type === "BUSINESS") rec.business += c.amount;
     if (c.type === "PI")       rec.pi       += c.amount;
+    // BI excluded — paid separately via BI Release
   }
 
   // Already paid this month
@@ -114,7 +110,6 @@ export async function GET(req: NextRequest) {
     const salary              = salaryBlocked ? 0 : (RANK_SALARY[m.rank] ?? 0);
     const comm                = commByMember.get(m.id) ?? { business: 0, pi: 0 };
     const groupVolume         = ownSales + getDownlineSales(m.id);
-    const piRateValue         = piRate?.ratePerPoint ?? 0;
 
     return {
       memberId:             m.id,
@@ -128,13 +123,11 @@ export async function GET(req: NextRequest) {
       salaryBlocked,
       salary,
       businessCommission:   parseFloat(comm.business.toFixed(2)),
-      piPoints:             parseFloat(comm.pi.toFixed(2)),
-      piRatePerPoint:       piRateValue,
-      piAmount:             parseFloat((comm.pi * piRateValue).toFixed(2)),
+      piAmount:             parseFloat(comm.pi.toFixed(2)),
       groupVolume:          parseFloat(groupVolume.toFixed(2)),
       alreadyPaid:          paidSet.has(m.id),
     };
   }).filter((m) => m.salary > 0 || m.businessCommission > 0 || m.piAmount > 0);
 
-  return NextResponse.json({ members: result, piRateSet: !!piRate });
+  return NextResponse.json({ members: result });
 }

@@ -41,7 +41,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const {
     name, email, phone, status, rank, sponsorId, managedBy, joiningDate,
     panNumber, aadhaarNumber, address,
-    bankAccount, ifscCode, upiId, bankName,
+    bankAccount, ifscCode, upiId, bankName, memberId,
   } = body;
 
   // Ranks are permanent — prevent downgrade via API
@@ -50,6 +50,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (current && RANK_ORDER.indexOf(rank) < RANK_ORDER.indexOf(current.rank)) {
       return NextResponse.json({ error: "Rank cannot be downgraded — ranks are permanent" }, { status: 400 });
     }
+  }
+
+  // Validate memberId uniqueness if being changed
+  if (memberId !== undefined) {
+    const conflict = await prisma.user.findFirst({ where: { memberId, NOT: { id } } });
+    if (conflict) return NextResponse.json({ error: "Member ID already in use" }, { status: 400 });
   }
 
   // Guard against circular sponsorship (A sponsors B, B sponsors A)
@@ -85,6 +91,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       ...(ifscCode     !== undefined && { ifscCode }),
       ...(upiId        !== undefined && { upiId }),
       ...(bankName     !== undefined && { bankName }),
+      ...(memberId     !== undefined && { memberId }),
     },
   });
 

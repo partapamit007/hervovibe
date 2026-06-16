@@ -16,6 +16,7 @@ export default function EditMemberPage() {
   const [tab, setTab]       = useState<Tab>("basic");
   const [form, setForm]     = useState<any>(null);
   const [sponsors, setSponsors] = useState<any[]>([]);
+  const [sponsorSearch, setSponsorSearch] = useState("");
   const [loading, setLoading]   = useState(true);
   const [saving, setSaving]     = useState(false);
   const [error, setError]       = useState("");
@@ -27,6 +28,7 @@ export default function EditMemberPage() {
       fetch("/api/members?all=1").then(r => r.json()),
     ]).then(([member, allMembers]) => {
       setForm({
+        memberId:      member.memberId     || "",
         name:          member.name         || "",
         email:         member.email        || "",
         phone:         member.phone        || "",
@@ -101,6 +103,7 @@ export default function EditMemberPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             {tab === "basic" && (
               <>
+                {input("memberId", "Member ID", "text")}
                 {input("name",  "Full Name")}
                 {input("email", "Email", "email")}
                 {input("phone", "Phone")}
@@ -120,12 +123,25 @@ export default function EditMemberPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Sponsor (Upline)</label>
+                  <input
+                    type="text"
+                    value={sponsorSearch}
+                    onChange={e => setSponsorSearch(e.target.value)}
+                    placeholder="Search by ID or name..."
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-t-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 border-b-0"
+                  />
                   <select value={form.sponsorId} onChange={e => setForm({ ...form, sponsorId: e.target.value })}
-                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+                    size={5}
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-b-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
                     <option value="">— No sponsor —</option>
-                    {sponsors.map((s: any) => (
-                      <option key={s.id} value={s.id}>{s.name} ({s.memberId})</option>
-                    ))}
+                    {sponsors
+                      .filter((s: any) => {
+                        const q = sponsorSearch.toLowerCase();
+                        return !q || s.memberId?.toLowerCase().includes(q) || s.name?.toLowerCase().includes(q);
+                      })
+                      .map((s: any) => (
+                        <option key={s.id} value={s.id}>[{s.memberId}] — {s.name}</option>
+                      ))}
                   </select>
                 </div>
               </>

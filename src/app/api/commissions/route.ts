@@ -11,11 +11,13 @@ export async function GET(req: NextRequest) {
   const memberId = searchParams.get("memberId");
   const month = searchParams.get("month");
   const year = searchParams.get("year");
+  const type = searchParams.get("type");
 
   const records = await prisma.commissionRecord.findMany({
     where: {
       ...(memberId ? { memberId } : {}),
       ...(month && year ? { month: parseInt(month), year: parseInt(year) } : {}),
+      ...(type ? { type: type as any } : {}),
     },
     include: {
       member: { select: { name: true, memberId: true } },

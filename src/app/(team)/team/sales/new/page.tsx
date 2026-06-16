@@ -27,6 +27,7 @@ export default function AddSalePage() {
   const [statusMsg, setStatusMsg] = useState("");
 
   const [memberId,      setMemberId]      = useState("");
+  const [memberSearch,  setMemberSearch]  = useState("");
   const [month,         setMonth]         = useState(String(now.getMonth() + 1));
   const [year,          setYear]          = useState(String(now.getFullYear()));
   const [notes,         setNotes]         = useState("");
@@ -139,12 +140,24 @@ export default function AddSalePage() {
             {/* Member */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Member</label>
-              <select value={memberId} onChange={(e) => setMemberId(e.target.value)} required
-                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <input
+                type="text"
+                value={memberSearch}
+                onChange={(e) => setMemberSearch(e.target.value)}
+                placeholder="Search by ID or name..."
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-t-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 border-b-0"
+              />
+              <select value={memberId} onChange={(e) => setMemberId(e.target.value)} required size={5}
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-b-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                 <option value="">Select a member...</option>
-                {members.map((m) => (
-                  <option key={m.id} value={m.id}>{m.name} {m.memberId ? `(${m.memberId})` : ""}</option>
-                ))}
+                {members
+                  .filter((m) => {
+                    const q = memberSearch.toLowerCase();
+                    return !q || m.memberId?.toLowerCase().includes(q) || m.name?.toLowerCase().includes(q);
+                  })
+                  .map((m) => (
+                    <option key={m.id} value={m.id}>[{m.memberId || "—"}] — {m.name}</option>
+                  ))}
               </select>
               {members.length === 0 && <p className="text-xs text-gray-400 mt-1">No members assigned to you yet</p>}
             </div>
