@@ -60,7 +60,7 @@ export default function AddMemberPage() {
         <p className="text-gray-500 text-sm">A secure temporary password is generated automatically.</p>
       </div>
 
-      {tempPassword && (
+      {false && (
         <div className="mb-4 p-4 bg-green-50 border border-green-300 rounded-lg">
           <p className="text-sm font-semibold text-green-800 mb-1">Member created successfully!</p>
           <p className="text-sm text-green-700">
@@ -288,12 +288,32 @@ export default function AddMemberPage() {
             </div>
 
             {error && <p className="text-red-500 text-sm">{error}</p>}
-            <div className="flex gap-3 pt-2">
-              <Button type="submit" disabled={loading} className="bg-green-600 hover:bg-green-700">
-                {loading ? "Adding..." : "Add Member"}
-              </Button>
-              <Button type="button" variant="outline" onClick={() => router.back()}>Cancel</Button>
-            </div>
+            {tempPassword && (
+              <div className="p-4 bg-green-50 border border-green-300 rounded-lg">
+                <p className="text-sm font-semibold text-green-800 mb-1">✅ Member created successfully!</p>
+                <p className="text-sm text-green-700 mb-2">Temporary password:&nbsp;
+                  <span className="font-mono font-bold bg-white border border-green-300 px-2 py-0.5 rounded text-green-900">{tempPassword}</span>
+                </p>
+                <div className="flex gap-3">
+                  <button type="button" onClick={() => router.push("/admin/members")}
+                    className="text-sm text-white bg-green-600 px-3 py-1.5 rounded hover:bg-green-700">
+                    Go to Members List
+                  </button>
+                  <button type="button" onClick={() => { setTempPassword(""); setForm({ name: "", email: "", phone: "", memberId: "", sponsorId: "", managedBy: "", joiningDate: today, panNumber: "", aadhaarNumber: "", address: "", bankName: "", bankAccount: "", ifscCode: "", upiId: "" }); }}
+                    className="text-sm text-green-700 underline">
+                    Add Another Member
+                  </button>
+                </div>
+              </div>
+            )}
+            {!tempPassword && (
+              <div className="flex gap-3 pt-2">
+                <Button type="submit" disabled={loading} className="bg-green-600 hover:bg-green-700">
+                  {loading ? "Adding..." : "Add Member"}
+                </Button>
+                <Button type="button" variant="outline" onClick={() => router.back()}>Cancel</Button>
+              </div>
+            )}
           </form>
         </CardContent>
       </Card>
