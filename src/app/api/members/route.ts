@@ -118,48 +118,61 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await auth();
-  if (!session || session.user.role !== "MASTER_ADMIN")
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  try {
+    const session = await auth();
+    if (!session || session.user.role !== "MASTER_ADMIN")
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const body = await req.json();
-  const { name, email, phone, sponsorId, managedBy, joiningDate,
-          panNumber, aadhaarNumber, address,
-          bankName, bankAccount, ifscCode, upiId,
-          memberId: customMemberId } = body;
+    const body = await req.json();
+    const { name, email, phone, sponsorId, managedBy, joiningDate,
+            panNumber, aadhaarNumber, address,
+            bankName, bankAccount, ifscCode, upiId,
+            memberId: customMemberId } = body;
 
-  let memberId: string;
-  if (customMemberId && customMemberId.trim()) {
-    const existing = await prisma.user.findFirst({ where: { memberId: customMemberId.trim() } });
-    if (existing) return NextResponse.json({ error: "Member ID already in use" }, { status: 400 });
-    memberId = customMemberId.trim();
-  } else {
-    const count = await prisma.user.count({ where: { role: "DISTRIBUTOR" } });
-    memberId = `HV-${String(count + 100).padStart(4, "0")}`;
+    if (!name || !name.trim())
+      return NextResponse.json({ error: "Full name is required" }, { status: 400 });
+
+    let memberId: string;
+    if (customMemberId && customMemberId.trim()) {
+      const existing = await prisma.user.findFirst({ where: { memberId: customMemberId.trim() } });
+      if (existing) return NextResponse.json({ error: "Member ID already in use" }, { status: 400 });
+      memberId = customMemberId.trim();
+    } else {
+      const count = await prisma.user.count({ where: { role: "DISTRIBUTOR" } });
+      memberId = `HV-${String(count + 100).padStart(4, "0")}`;
+    }
+
+    const chars = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+    const tempPwd = "Hv@" + Array.from({ length: 7 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+    const password = await bcrypt.hash(tempPwd, 10);
+
+    const rand = Math.random().toString(36).slice(2, 6);
+    const resolvedEmail = (email && email.trim())
+      ? email.trim()
+      : `${memberId.toLowerCase().replace(/[^a-z0-9]/g, "")}_${rand}@hv.local`;
+
+    const member = await prisma.user.create({
+      data: {
+        name: name.trim(), email: resolvedEmail, phone: phone || null, memberId, password,
+        role: "DISTRIBUTOR",
+        rank: "DISTRIBUTOR",
+        joiningDate: joiningDate ? new Date(joiningDate) : new Date(),
+        ...(sponsorId     && { sponsorId }),
+        ...(managedBy     && { managedBy }),
+        ...(panNumber     && { panNumber }),
+        ...(aadhaarNumber && { aadhaarNumber }),
+        ...(address       && { address }),
+        ...(bankName      && { bankName }),
+        ...(bankAccount   && { bankAccount }),
+        ...(ifscCode      && { ifscCode }),
+        ...(upiId         && { upiId }),
+      },
+    });
+
+    return NextResponse.json({ ...member, tempPassword: tempPwd }, { status: 201 });
+  } catch (err: any) {
+    console.error("[POST /api/members]", err);
+    if (err?.code === "P2002") return NextResponse.json({ error: "A member with this ID or email already exists" }, { status: 400 });
+    return NextResponse.json({ error: err?.message || "Failed to create member" }, { status: 500 });
   }
-  const chars = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
-  const tempPwd = "Hv@" + Array.from({ length: 7 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
-  const password = await bcrypt.hash(tempPwd, 10);
-
-  const resolvedEmail = (email && email.trim()) ? email.trim() : `${memberId.toLowerCase().replace(/[^a-z0-9]/g, "")}@hv.local`;
-
-  const member = await prisma.user.create({
-    data: {
-      name, email: resolvedEmail, phone, memberId, password,
-      role: "DISTRIBUTOR",
-      rank: "DISTRIBUTOR",
-      joiningDate: joiningDate ? new Date(joiningDate) : new Date(),
-      ...(sponsorId    && { sponsorId }),
-      ...(managedBy    && { managedBy }),
-      ...(panNumber    && { panNumber }),
-      ...(aadhaarNumber && { aadhaarNumber }),
-      ...(address      && { address }),
-      ...(bankName     && { bankName }),
-      ...(bankAccount  && { bankAccount }),
-      ...(ifscCode     && { ifscCode }),
-      ...(upiId        && { upiId }),
-    },
-  });
-
-  return NextResponse.json({ ...member, tempPassword: tempPwd }, { status: 201 });
 }
