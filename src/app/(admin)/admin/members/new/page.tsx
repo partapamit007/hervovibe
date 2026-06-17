@@ -33,17 +33,22 @@ export default function AddMemberPage() {
     e.preventDefault();
     setLoading(true);
     setError("");
-    const res = await fetch("/api/members", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
-    if (res.ok) {
+    try {
+      const res = await fetch("/api/members", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
       const d = await res.json();
-      setTempPassword(d.tempPassword ?? "");
-    } else {
-      const d = await res.json();
-      setError(d.error || "Failed to add member");
+      if (res.ok) {
+        setTempPassword(d.tempPassword ?? "");
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } else {
+        setError(d.error || "Failed to add member");
+      }
+    } catch {
+      setError("Network error. Please try again.");
+    } finally {
       setLoading(false);
     }
   }
