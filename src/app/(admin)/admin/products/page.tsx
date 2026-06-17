@@ -79,7 +79,7 @@ export default function ProductsPage() {
     <div className="max-w-3xl">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Product Catalog</h1>
-        <p className="text-gray-500 text-sm">Set MRP, PI%, and BI% per product</p>
+        <p className="text-gray-500 text-sm">Set Sale Price, PI%, and BI% per product</p>
       </div>
 
       {/* Info banner */}
@@ -126,7 +126,7 @@ export default function ProductsPage() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">MRP (₹) *</label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Sale Price (₹) *</label>
                 <input type="number" min="0" step="0.01" required value={form.mrp}
                   onChange={e => setForm({ ...form, mrp: e.target.value })}
                   placeholder="e.g. 600"
@@ -228,7 +228,7 @@ export default function ProductsPage() {
                 <thead>
                   <tr className="text-xs text-gray-500 border-b border-gray-100">
                     <th className="text-left pb-2 font-medium pr-4">Product</th>
-                    <th className="text-right pb-2 font-medium px-3">MRP</th>
+                    <th className="text-right pb-2 font-medium px-3">Sale Price</th>
                     <th className="text-right pb-2 font-medium px-3 text-green-700">Seller PI%</th>
                     <th className="text-right pb-2 font-medium px-3 text-green-700">Upline PI%</th>
                     <th className="text-right pb-2 font-medium px-3 text-purple-700">Seller BI%</th>
