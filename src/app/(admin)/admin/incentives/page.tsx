@@ -29,7 +29,7 @@ const commTypeColor: Record<string, string> = {
 
 export default function IncentivesPage() {
   const now = new Date();
-  const [tab, setTab] = useState<"pi" | "bi" | "pirate" | "commissions">("pi");
+  const [tab, setTab] = useState<"pi" | "bi" | "levelconfig" | "pirate" | "commissions">("pi");
 
   // Commission records for PI / BI tabs
   const [piRecords, setPiRecords] = useState<CommissionRecord[]>([]);
@@ -58,6 +58,12 @@ export default function IncentivesPage() {
   const [commMonth, setCommMonth] = useState(String(now.getMonth() + 1));
   const [commYear, setCommYear]   = useState(String(now.getFullYear()));
 
+  // Level config state
+  interface LevelConfig { id: string; type: string; level: number; pct: number; }
+  const [levelConfigs, setLevelConfigs] = useState<LevelConfig[]>([]);
+  const [levelSaving, setLevelSaving]   = useState<string | null>(null);
+  const [levelInputs, setLevelInputs]   = useState<Record<string, string>>({});
+
   const [status, setStatus]     = useState<"idle" | "success" | "error">("idle");
   const [statusMsg, setStatusMsg] = useState("");
 
@@ -70,7 +76,37 @@ export default function IncentivesPage() {
     loadBiConfig();
     loadPiRates();
     loadPiRecords();
+    loadLevelConfigs();
   }, []);
+
+  function loadLevelConfigs() {
+    fetch("/api/incentive-level-config").then((r) => r.json()).then((d) => {
+      if (Array.isArray(d)) {
+        setLevelConfigs(d);
+        const inputs: Record<string, string> = {};
+        d.forEach((c: LevelConfig) => { inputs[`${c.type}_${c.level}`] = String(c.pct); });
+        setLevelInputs(inputs);
+      }
+    });
+  }
+
+  async function saveLevelConfig(type: "PI" | "BI", level: number) {
+    const key = `${type}_${level}`;
+    const pct = levelInputs[key] ?? "";
+    setLevelSaving(key);
+    const res = await fetch("/api/incentive-level-config", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type, level, pct }),
+    });
+    if (res.ok) {
+      showStatus("success", `Level ${level} ${type} set to ${pct}%`);
+      loadLevelConfigs();
+    } else {
+      const err = await res.json();
+      showStatus("error", err.error || "Failed to save");
+    }
+    setLevelSaving(null);
+  }
 
   function loadPiRecords(m = piMonth, y = piYear) {
     fetch(`/api/commissions?type=PI&month=${m}&year=${y}`)
@@ -179,6 +215,7 @@ export default function IncentivesPage() {
       <div className="flex border-b border-gray-200 mb-6 overflow-x-auto">
         <button onClick={() => { setTab("pi"); loadPiRecords(); }} className={tabClass("pi")}>Product Incentive (PI)</button>
         <button onClick={() => { setTab("bi"); loadBiRecords(); }} className={tabClass("bi")}>Business Incentive (BI)</button>
+        <button onClick={() => { setTab("levelconfig"); loadLevelConfigs(); }} className={tabClass("levelconfig")}>Upline Level %</button>
         <button onClick={() => setTab("pirate")} className={tabClass("pirate")}>PI Rate (₹/pt)</button>
         <button onClick={() => { setTab("commissions"); loadCommissions(commMonth, commYear); }} className={tabClass("commissions")}>
           All Commissions
@@ -368,6 +405,80 @@ export default function IncentivesPage() {
               </CardContent>
             </Card>
           )}
+        </>
+      )}
+
+      {/* UPLINE LEVEL % CONFIG TAB */}
+      {tab === "levelconfig" && (
+        <>
+          <div className="flex gap-3 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 mb-6 text-sm">
+            <Info className="w-4 h-4 shrink-0 mt-0.5 text-blue-500" />
+            <div className="text-blue-800 text-xs leading-relaxed">
+              <p className="font-semibold mb-0.5">Per-level upline distribution</p>
+              <p>
+                Set what <strong>% of total PI or BI</strong> each upline level receives. Level 1 = direct sponsor, Level 2 = sponsor's sponsor, etc.
+                Leave a level blank (or 0%) to give that level nothing. If <strong>no levels are configured</strong>, the system falls back to equal split among all upline.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            {(["PI", "BI"] as const).map((type) => (
+              <Card key={type}>
+                <CardHeader>
+                  <CardTitle className={`text-base ${type === "PI" ? "text-green-700" : "text-purple-700"}`}>
+                    {type === "PI" ? "PI — Product Incentive" : "BI — Business Incentive"} Upline %
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {[1, 2, 3, 4, 5, 6, 7, 8].map((level) => {
+                      const key = `${type}_${level}`;
+                      const val = levelInputs[key] ?? "";
+                      const isSaving = levelSaving === key;
+                      return (
+                        <div key={level} className="flex items-center gap-3">
+                          <span className="text-xs text-gray-500 w-16 shrink-0">Level {level}</span>
+                          <div className="relative flex-1">
+                            <input
+                              type="number" min="0" max="100" step="0.01"
+                              value={val}
+                              onChange={(e) => setLevelInputs({ ...levelInputs, [key]: e.target.value })}
+                              placeholder="0"
+                              className={`w-full px-2.5 py-1.5 pr-7 border rounded-md text-sm focus:outline-none focus:ring-2 ${
+                                type === "PI"
+                                  ? "border-green-300 focus:ring-green-500"
+                                  : "border-purple-300 focus:ring-purple-500"
+                              }`}
+                            />
+                            <span className="absolute right-2.5 top-1.5 text-xs text-gray-400">%</span>
+                          </div>
+                          <Button
+                            size="sm"
+                            disabled={isSaving}
+                            onClick={() => saveLevelConfig(type, level)}
+                            className={`text-xs px-3 ${type === "PI" ? "bg-green-600 hover:bg-green-700" : "bg-purple-600 hover:bg-purple-700"} text-white`}
+                          >
+                            {isSaving ? "..." : "Save"}
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-gray-100">
+                    <p className="text-xs text-gray-400">
+                      Total configured:{" "}
+                      <span className={`font-semibold ${type === "PI" ? "text-green-700" : "text-purple-700"}`}>
+                        {[1,2,3,4,5,6,7,8]
+                          .reduce((sum, l) => sum + (parseFloat(levelInputs[`${type}_${l}`] || "0") || 0), 0)
+                          .toFixed(2)}%
+                      </span>
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </>
       )}
 

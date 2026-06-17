@@ -27,6 +27,14 @@ async function getBiBaseRate(): Promise<number> {
   return config ? config.baseRate / 100 : 0.01;
 }
 
+// Returns {level → pct/100} map for a given type (PI or BI). Empty map = equal-split fallback.
+async function getLevelPctMap(type: "PI" | "BI"): Promise<Record<number, number>> {
+  const rows = await prisma.incentiveLevelConfig.findMany({ where: { type } });
+  const map: Record<number, number> = {};
+  for (const r of rows) map[r.level] = r.pct / 100;
+  return map;
+}
+
 export async function calculateCommissions(saleId: string) {
   const sale = await prisma.sale.findUnique({
     where: { id: saleId },
@@ -89,14 +97,26 @@ export async function calculateCommissions(saleId: string) {
     curSponsorId = upline.sponsorId;
   }
 
-  // 4. PI distributed equally among ALL upline members (remainder goes to last upline)
+  // 4. PI distributed to upline — uses per-level % config if set, else equal split
   if (totalPI >= 0.01 && uplineChain.length > 0) {
-    const piPerUpline = parseFloat((totalPI / uplineChain.length).toFixed(2));
-    const piRemainder = parseFloat((totalPI - piPerUpline * uplineChain.length).toFixed(2));
-    uplineChain.forEach((u, idx) => {
-      const isLast = idx === uplineChain.length - 1;
-      records.push({ ...base, memberId: u.id, type: "PI", amount: isLast ? piPerUpline + piRemainder : piPerUpline, depth: idx + 1 });
-    });
+    const piLevelPct = await getLevelPctMap("PI");
+    const hasConfig = Object.keys(piLevelPct).length > 0;
+    if (hasConfig) {
+      uplineChain.forEach((u, idx) => {
+        const depth = idx + 1;
+        const pct = piLevelPct[depth] ?? 0;
+        if (pct > 0) {
+          records.push({ ...base, memberId: u.id, type: "PI", amount: parseFloat((totalPI * pct).toFixed(2)), depth });
+        }
+      });
+    } else {
+      const piPerUpline = parseFloat((totalPI / uplineChain.length).toFixed(2));
+      const piRemainder = parseFloat((totalPI - piPerUpline * uplineChain.length).toFixed(2));
+      uplineChain.forEach((u, idx) => {
+        const isLast = idx === uplineChain.length - 1;
+        records.push({ ...base, memberId: u.id, type: "PI", amount: isLast ? piPerUpline + piRemainder : piPerUpline, depth: idx + 1 });
+      });
+    }
   }
 
   // 5. BUSINESS (rank-gated) per upline level
@@ -109,14 +129,26 @@ export async function calculateCommissions(saleId: string) {
     }
   });
 
-  // 6. BI distributed equally among ALL upline members (same rule as PI, remainder to last)
+  // 6. BI distributed to upline — uses per-level % config if set, else equal split
   if (totalBIBase >= 0.01 && uplineChain.length > 0) {
-    const biPerUpline = parseFloat((totalBIBase / uplineChain.length).toFixed(2));
-    const biRemainder = parseFloat((totalBIBase - biPerUpline * uplineChain.length).toFixed(2));
-    uplineChain.forEach((u, idx) => {
-      const isLast = idx === uplineChain.length - 1;
-      records.push({ ...base, memberId: u.id, type: "BI", amount: isLast ? biPerUpline + biRemainder : biPerUpline, depth: idx + 1 });
-    });
+    const biLevelPct = await getLevelPctMap("BI");
+    const hasConfig = Object.keys(biLevelPct).length > 0;
+    if (hasConfig) {
+      uplineChain.forEach((u, idx) => {
+        const depth = idx + 1;
+        const pct = biLevelPct[depth] ?? 0;
+        if (pct > 0) {
+          records.push({ ...base, memberId: u.id, type: "BI", amount: parseFloat((totalBIBase * pct).toFixed(2)), depth });
+        }
+      });
+    } else {
+      const biPerUpline = parseFloat((totalBIBase / uplineChain.length).toFixed(2));
+      const biRemainder = parseFloat((totalBIBase - biPerUpline * uplineChain.length).toFixed(2));
+      uplineChain.forEach((u, idx) => {
+        const isLast = idx === uplineChain.length - 1;
+        records.push({ ...base, memberId: u.id, type: "BI", amount: isLast ? biPerUpline + biRemainder : biPerUpline, depth: idx + 1 });
+      });
+    }
   }
 
   if (records.length > 0) {

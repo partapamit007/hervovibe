@@ -227,6 +227,17 @@ model BiConfig {
   @@map("bi_config")
 }
 
+model IncentiveLevelConfig {
+  id        String   @id @default(cuid())
+  type      String   // "PI" or "BI"
+  level     Int      // 1–8 (depth in upline chain, 1 = direct sponsor)
+  pct       Float    // % of total PI/BI pool this level receives
+  updatedAt DateTime @updatedAt
+
+  @@unique([type, level])
+  @@map("incentive_level_config")
+}
+
 model RankHistory {
   id        String   @id @default(cuid())
   memberId  String
