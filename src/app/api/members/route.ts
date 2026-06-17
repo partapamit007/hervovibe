@@ -141,9 +141,11 @@ export async function POST(req: NextRequest) {
   const tempPwd = "Hv@" + Array.from({ length: 7 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
   const password = await bcrypt.hash(tempPwd, 10);
 
+  const resolvedEmail = (email && email.trim()) ? email.trim() : `${memberId.toLowerCase().replace(/[^a-z0-9]/g, "")}@hv.local`;
+
   const member = await prisma.user.create({
     data: {
-      name, email, phone, memberId, password,
+      name, email: resolvedEmail, phone, memberId, password,
       role: "DISTRIBUTOR",
       rank: "DISTRIBUTOR",
       joiningDate: joiningDate ? new Date(joiningDate) : new Date(),
