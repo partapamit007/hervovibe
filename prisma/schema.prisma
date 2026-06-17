@@ -98,10 +98,10 @@ model Product {
   id        String     @id @default(cuid())
   name      String
   mrp       Float
-  piRate    Float      @default(10)  // PI % of MRP — paid monthly to seller + upline split
-  biRate    Float      @default(1)   // BI base % of MRP — split equally among all upline — paid per admin schedule
-  piDirect  Float      @default(0)   // legacy, unused
-  piUpline  Float      @default(0)   // legacy, unused
+  piRate    Float      @default(10)  // PI % of MRP — seller's own PI
+  biRate    Float      @default(1)   // BI % of MRP — each upline member earns this fixed % per sale
+  piDirect  Float      @default(0)   // unused
+  piUpline  Float      @default(0)   // PI % of MRP — each upline member earns this fixed % per sale
   isActive  Boolean    @default(true)
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
