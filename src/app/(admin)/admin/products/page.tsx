@@ -12,10 +12,11 @@ interface Product {
   piRate: number;
   piUpline: number;
   biRate: number;
+  biUpline: number;
   isActive: boolean;
 }
 
-const emptyForm = { name: "", mrp: "", piRate: "10", piUpline: "5", biRate: "1" };
+const emptyForm = { name: "", mrp: "", piRate: "10", piUpline: "5", biRate: "1", biUpline: "0.5" };
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -35,7 +36,7 @@ export default function ProductsPage() {
 
   function startEdit(p: Product) {
     setEditId(p.id);
-    setForm({ name: p.name, mrp: String(p.mrp), piRate: String(p.piRate ?? 10), piUpline: String(p.piUpline ?? 5), biRate: String(p.biRate ?? 1) });
+    setForm({ name: p.name, mrp: String(p.mrp), piRate: String(p.piRate ?? 10), piUpline: String(p.piUpline ?? 5), biRate: String(p.biRate ?? 1), biUpline: String(p.biUpline ?? 0.5) });
   }
 
   function cancelEdit() { setEditId(null); setForm(emptyForm); }
@@ -45,8 +46,8 @@ export default function ProductsPage() {
     setLoading(true); setStatus("idle");
     const method = editId ? "PATCH" : "POST";
     const body = editId
-      ? { id: editId, name: form.name, mrp: form.mrp, piRate: form.piRate, piUpline: form.piUpline, biRate: form.biRate }
-      : { name: form.name, mrp: form.mrp, piRate: form.piRate, piUpline: form.piUpline, biRate: form.biRate };
+      ? { id: editId, name: form.name, mrp: form.mrp, piRate: form.piRate, piUpline: form.piUpline, biRate: form.biRate, biUpline: form.biUpline }
+      : { name: form.name, mrp: form.mrp, piRate: form.piRate, piUpline: form.piUpline, biRate: form.biRate, biUpline: form.biUpline };
     const res = await fetch("/api/products", {
       method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
     });
@@ -72,6 +73,7 @@ export default function ProductsPage() {
   const piVal       = parseFloat(form.piRate)   || 0;
   const piUplineVal = parseFloat(form.piUpline) || 0;
   const biVal       = parseFloat(form.biRate)   || 0;
+  const biUplineVal = parseFloat(form.biUpline) || 0;
 
   return (
     <div className="max-w-3xl">
@@ -135,7 +137,8 @@ export default function ProductsPage() {
 
             <div className="border-t border-gray-100 pt-3 space-y-3">
               <p className="text-xs font-semibold text-gray-600">Incentive Rates</p>
-              <div className="grid grid-cols-3 gap-3">
+              {/* PI row */}
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-green-700 mb-1">Seller PI %</label>
                   <div className="relative">
@@ -164,8 +167,11 @@ export default function ProductsPage() {
                     <p className="text-xs text-green-600 mt-1">₹{(mrpVal * piUplineVal / 100).toFixed(2)} / unit (each upline)</p>
                   )}
                 </div>
+              </div>
+              {/* BI row */}
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-purple-700 mb-1">BI % (each upline)</label>
+                  <label className="block text-xs font-medium text-purple-700 mb-1">Seller BI %</label>
                   <div className="relative">
                     <input type="number" min="0" max="100" step="0.01" value={form.biRate}
                       onChange={e => setForm({ ...form, biRate: e.target.value })}
@@ -175,11 +181,25 @@ export default function ProductsPage() {
                     <span className="absolute right-2.5 top-1.5 text-xs text-gray-400">%</span>
                   </div>
                   {mrpVal > 0 && biVal > 0 && (
-                    <p className="text-xs text-purple-600 mt-1">₹{(mrpVal * biVal / 100).toFixed(2)} / unit (each upline)</p>
+                    <p className="text-xs text-purple-600 mt-1">₹{(mrpVal * biVal / 100).toFixed(2)} / unit (seller)</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-purple-700 mb-1">Upline BI %</label>
+                  <div className="relative">
+                    <input type="number" min="0" max="100" step="0.01" value={form.biUpline}
+                      onChange={e => setForm({ ...form, biUpline: e.target.value })}
+                      placeholder="0.5"
+                      className="w-full px-2.5 py-1.5 pr-7 border border-purple-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                    <span className="absolute right-2.5 top-1.5 text-xs text-gray-400">%</span>
+                  </div>
+                  {mrpVal > 0 && biUplineVal > 0 && (
+                    <p className="text-xs text-purple-600 mt-1">₹{(mrpVal * biUplineVal / 100).toFixed(2)} / unit (each upline)</p>
                   )}
                 </div>
               </div>
-              <p className="text-xs text-gray-400">Upline PI% and BI% are earned by <strong>every</strong> upline member independently — same fixed amount per level.</p>
+              <p className="text-xs text-gray-400">Upline PI% and BI% are earned by <strong>every</strong> upline member independently — same fixed amount at every level.</p>
             </div>
 
             <div className="flex gap-2 pt-1">
@@ -209,17 +229,19 @@ export default function ProductsPage() {
                   <tr className="text-xs text-gray-500 border-b border-gray-100">
                     <th className="text-left pb-2 font-medium pr-4">Product</th>
                     <th className="text-right pb-2 font-medium px-3">MRP</th>
-                    <th className="text-right pb-2 font-medium px-3 text-green-700">Seller PI %</th>
-                    <th className="text-right pb-2 font-medium px-3 text-green-700">Upline PI %</th>
-                    <th className="text-right pb-2 font-medium px-3 text-purple-700">BI %</th>
+                    <th className="text-right pb-2 font-medium px-3 text-green-700">Seller PI%</th>
+                    <th className="text-right pb-2 font-medium px-3 text-green-700">Upline PI%</th>
+                    <th className="text-right pb-2 font-medium px-3 text-purple-700">Seller BI%</th>
+                    <th className="text-right pb-2 font-medium px-3 text-purple-700">Upline BI%</th>
                     <th className="pb-2 w-16"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {products.map((p) => {
-                    const piRate    = p.piRate    ?? 10;
-                    const piUpline  = p.piUpline  ?? 0;
-                    const biRate    = p.biRate    ?? 1;
+                    const piRate   = p.piRate   ?? 10;
+                    const piUpline = p.piUpline ?? 0;
+                    const biRate   = p.biRate   ?? 1;
+                    const biUpline = p.biUpline ?? 0;
                     return (
                       <tr key={p.id}>
                         <td className="py-3 pr-4 font-semibold text-gray-800">{p.name}</td>
@@ -227,6 +249,7 @@ export default function ProductsPage() {
                         <td className="py-3 px-3 text-right text-green-700 font-medium">{piRate}%</td>
                         <td className="py-3 px-3 text-right text-green-600 font-medium">{piUpline}%</td>
                         <td className="py-3 px-3 text-right text-purple-700 font-medium">{biRate}%</td>
+                        <td className="py-3 px-3 text-right text-purple-600 font-medium">{biUpline}%</td>
                         <td className="py-3 text-right">
                           <div className="flex gap-2 justify-end">
                             <button onClick={() => startEdit(p)} className="text-gray-400 hover:text-blue-600">
