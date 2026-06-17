@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { TrendingUp, CheckCircle, XCircle, Trash2, ExternalLink, ImagePlus, X, Plus, Minus } from "lucide-react";
+import { TrendingUp, CheckCircle, XCircle, Trash2, ExternalLink, ImagePlus, X, Plus, Minus, Printer } from "lucide-react";
 
 const rankColors: Record<string, string> = {
   DISTRIBUTOR:   "bg-gray-100 text-gray-700",
@@ -159,6 +159,76 @@ export default function AdminSalesPage() {
 
   function applyFilter() {
     loadSales(filterMonth, filterYear);
+  }
+
+  function printInvoice(s: Sale) {
+    const invoiceNo = `HV-${s.id.slice(-6).toUpperCase()}`;
+    const printDate = new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" });
+    const saleMonth = months[s.month - 1];
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/>
+<title>Invoice ${invoiceNo}</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: Arial, sans-serif; font-size: 13px; color: #1a1a1a; padding: 40px; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #16a34a; padding-bottom: 16px; margin-bottom: 24px; }
+  .brand h1 { font-size: 22px; font-weight: 800; color: #16a34a; }
+  .brand p { font-size: 11px; color: #555; margin-top: 2px; }
+  .inv-meta { text-align: right; }
+  .inv-meta h2 { font-size: 18px; font-weight: 700; color: #1a1a1a; }
+  .inv-meta p { font-size: 11px; color: #666; margin-top: 3px; }
+  .section { margin-bottom: 20px; }
+  .section-title { font-size: 10px; font-weight: 700; color: #666; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .info-row { display: flex; gap: 6px; margin-bottom: 4px; }
+  .info-label { font-size: 11px; color: #666; min-width: 90px; }
+  .info-value { font-size: 12px; font-weight: 600; color: #1a1a1a; }
+  .amount-box { background: #f0fdf4; border: 1.5px solid #16a34a; border-radius: 8px; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; margin: 24px 0; }
+  .amount-label { font-size: 13px; color: #166534; font-weight: 600; }
+  .amount-value { font-size: 24px; font-weight: 800; color: #15803d; }
+  .footer { border-top: 1px solid #e5e7eb; margin-top: 32px; padding-top: 14px; display: flex; justify-content: space-between; align-items: center; }
+  .footer p { font-size: 10px; color: #9ca3af; }
+  .badge { display: inline-block; background: #d1fae5; color: #065f46; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 999px; margin-left: 6px; }
+  @media print { body { padding: 20px; } }
+</style></head><body>
+<div class="header">
+  <div class="brand">
+    <h1>Hervovibe</h1>
+    <p>A Herbal Div. of Vibdrugs · herbovibe.in</p>
+  </div>
+  <div class="inv-meta">
+    <h2>SALE RECEIPT</h2>
+    <p>${invoiceNo}</p>
+    <p>Printed: ${printDate}</p>
+  </div>
+</div>
+<div class="info-grid section">
+  <div>
+    <div class="section-title">Member Details</div>
+    <div class="info-row"><span class="info-label">Name</span><span class="info-value">${s.member.name}</span></div>
+    <div class="info-row"><span class="info-label">Member ID</span><span class="info-value">${s.member.memberId} <span class="badge">${s.member.rank.replace(/_/g, " ")}</span></span></div>
+  </div>
+  <div>
+    <div class="section-title">Sale Period</div>
+    <div class="info-row"><span class="info-label">Month</span><span class="info-value">${saleMonth} ${s.year}</span></div>
+    <div class="info-row"><span class="info-label">Recorded by</span><span class="info-value">${s.enteredBy.name}</span></div>
+    ${s.notes ? `<div class="info-row"><span class="info-label">Notes</span><span class="info-value">${s.notes}</span></div>` : ""}
+  </div>
+</div>
+<div class="amount-box">
+  <span class="amount-label">Total Sale Amount</span>
+  <span class="amount-value">₹${s.amount.toLocaleString("en-IN")}</span>
+</div>
+<div class="footer">
+  <p>Hervovibe — A Herbal Div. of Vibdrugs · Panchkula, Tricity Chandigarh</p>
+  <p>This is a computer-generated document.</p>
+</div>
+</body></html>`;
+    const w = window.open("", "_blank", "width=800,height=600");
+    if (!w) return;
+    w.document.write(html);
+    w.document.close();
+    w.focus();
+    setTimeout(() => { w.print(); }, 300);
   }
 
   return (
@@ -373,6 +443,10 @@ export default function AdminSalesPage() {
                         <ExternalLink className="w-4 h-4" />
                       </a>
                     )}
+                    <button onClick={() => printInvoice(s)} title="Print Invoice"
+                      className="text-gray-400 hover:text-green-600 transition-colors">
+                      <Printer className="w-4 h-4" />
+                    </button>
                     <button onClick={() => handleDelete(s.id)} disabled={deleting === s.id}
                       className="text-gray-400 hover:text-red-500 transition-colors">
                       <Trash2 className="w-4 h-4" />
