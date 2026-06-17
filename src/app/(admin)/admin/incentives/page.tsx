@@ -248,11 +248,11 @@ export default function IncentivesPage() {
                         <p className="text-sm font-semibold text-gray-900">{m.name}</p>
                         <p className="text-xs text-gray-500">
                           [{m.memberId}]
-                          {m.depth0 > 0 && <span className="ml-2 text-green-600">Direct: ₹{m.depth0.toFixed(2)}</span>}
-                          {m.total - m.depth0 > 0 && <span className="ml-2 text-blue-600">Upline split: ₹{(m.total - m.depth0).toFixed(2)}</span>}
+                          {m.depth0 > 0 && <span className="ml-2 text-green-600">Direct: {m.depth0.toFixed(2)} PT</span>}
+                          {m.total - m.depth0 > 0 && <span className="ml-2 text-blue-600">Upline split: {(m.total - m.depth0).toFixed(2)} PT</span>}
                         </p>
                       </div>
-                      <span className="text-sm font-bold text-green-700">₹{m.total.toFixed(2)}</span>
+                      <span className="text-sm font-bold text-green-700">{m.total.toFixed(2)} PT</span>
                     </div>
                   ))}
                 </div>
@@ -482,7 +482,7 @@ export default function IncentivesPage() {
                         </div>
                         <div className="flex gap-2 mt-1.5 flex-wrap">
                           {m.business > 0 && <Badge className="text-xs bg-blue-100 text-blue-700">Business ₹{m.business.toFixed(2)}</Badge>}
-                          {m.pi > 0 && <Badge className="text-xs bg-green-100 text-green-700">PI ₹{m.pi.toFixed(2)}</Badge>}
+                          {m.pi > 0 && <Badge className="text-xs bg-green-100 text-green-700">PI {m.pi.toFixed(2)} PT</Badge>}
                           {m.bi > 0 && <Badge className="text-xs bg-purple-100 text-purple-700">BI ₹{m.bi.toFixed(2)}</Badge>}
                         </div>
                       </div>
