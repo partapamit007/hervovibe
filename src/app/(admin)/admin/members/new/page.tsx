@@ -19,6 +19,7 @@ export default function AddMemberPage() {
   const [sponsors, setSponsors] = useState<any[]>([]);
   const [teamMembers, setTeamMembers] = useState<any[]>([]);
   const [sponsorSearch, setSponsorSearch] = useState("");
+  const [noSponsor, setNoSponsor] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [tempPassword, setTempPassword] = useState("");
@@ -131,37 +132,61 @@ export default function AddMemberPage() {
               <p className="text-xs text-gray-400 mt-1">First month sales of ₹1,260 must be recorded from this date</p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Sponsor (Upline)</label>
-              <input
-                type="text"
-                value={sponsorSearch}
-                onChange={e => setSponsorSearch(e.target.value)}
-                placeholder="Search by ID or name..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-t-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500 border-b-0"
-              />
-              <select
-                value={form.sponsorId}
-                onChange={e => setForm({ ...form, sponsorId: e.target.value })}
-                size={5}
-                className="w-full px-3 py-2 border border-gray-300 rounded-b-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-              >
-                <option value="">— No sponsor —</option>
-                {sponsors
-                  .filter((s: any) => {
-                    const q = sponsorSearch.toLowerCase();
-                    return !q || s.memberId?.toLowerCase().includes(q) || s.name?.toLowerCase().includes(q);
-                  })
-                  .map((s: any) => {
-                    const filled = s._count?.downline || 0;
-                    const label = filled >= 6 ? `✓ ${filled} members` : `${filled}/6 min`;
-                    return (
-                      <option key={s.id} value={s.id}>
-                        [{s.memberId}] — {s.name} ({label})
-                      </option>
-                    );
-                  })}
-              </select>
-              <p className="text-xs text-gray-400 mt-1">Minimum 6 direct members required for rank qualification</p>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Sponsor (Upline)</label>
+              <div className="flex gap-3 mb-3">
+                <button
+                  type="button"
+                  onClick={() => { setNoSponsor(false); }}
+                  className={`flex-1 py-2 px-3 rounded-md border text-sm font-medium transition-all ${!noSponsor ? "bg-green-600 text-white border-green-600" : "bg-white text-gray-600 border-gray-300 hover:border-gray-400"}`}
+                >
+                  Has a Sponsor
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setNoSponsor(true); setForm({ ...form, sponsorId: "" }); setSponsorSearch(""); }}
+                  className={`flex-1 py-2 px-3 rounded-md border text-sm font-medium transition-all ${noSponsor ? "bg-orange-500 text-white border-orange-500" : "bg-white text-gray-600 border-gray-300 hover:border-gray-400"}`}
+                >
+                  Direct / No Sponsor
+                </button>
+              </div>
+              {noSponsor ? (
+                <div className="bg-orange-50 border border-orange-200 rounded-md px-4 py-3 text-sm text-orange-800">
+                  This member joined directly under the company — no upline sponsor.
+                </div>
+              ) : (
+                <>
+                  <input
+                    type="text"
+                    value={sponsorSearch}
+                    onChange={e => setSponsorSearch(e.target.value)}
+                    placeholder="Search by ID or name..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-t-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500 border-b-0"
+                  />
+                  <select
+                    value={form.sponsorId}
+                    onChange={e => setForm({ ...form, sponsorId: e.target.value })}
+                    size={5}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-b-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  >
+                    <option value="">— Select a sponsor —</option>
+                    {sponsors
+                      .filter((s: any) => {
+                        const q = sponsorSearch.toLowerCase();
+                        return !q || s.memberId?.toLowerCase().includes(q) || s.name?.toLowerCase().includes(q);
+                      })
+                      .map((s: any) => {
+                        const filled = s._count?.downline || 0;
+                        const label = filled >= 6 ? `✓ ${filled} members` : `${filled}/6 min`;
+                        return (
+                          <option key={s.id} value={s.id}>
+                            [{s.memberId}] — {s.name} ({label})
+                          </option>
+                        );
+                      })}
+                  </select>
+                  <p className="text-xs text-gray-400 mt-1">Minimum 6 direct members required for rank qualification</p>
+                </>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Assigned Team Member</label>
