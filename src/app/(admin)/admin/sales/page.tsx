@@ -192,7 +192,7 @@ export default function AdminSalesPage() {
 </style></head><body>
 <div class="header">
   <div class="brand">
-    <h1>Hervovibe</h1>
+    <h1>Bengal Herbovibe</h1>
     <p>A Herbal Div. of Vibdrugs · herbovibe.in</p>
   </div>
   <div class="inv-meta">
@@ -219,7 +219,7 @@ export default function AdminSalesPage() {
   <span class="amount-value">₹${s.amount.toLocaleString("en-IN")}</span>
 </div>
 <div class="footer">
-  <p>Hervovibe — A Herbal Div. of Vibdrugs · Panchkula, Tricity Chandigarh</p>
+  <p>Bengal Herbovibe — A Herbal Div. of Vibdrugs · Panchkula, Tricity Chandigarh</p>
   <p>This is a computer-generated document.</p>
 </div>
 </body></html>`;

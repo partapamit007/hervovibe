@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
   return new NextResponse(csv, {
     headers: {
       "Content-Type": "text/csv",
-      "Content-Disposition": `attachment; filename="hervovibe-sales-${year ?? "all"}-${month ?? "all"}.csv"`,
+      "Content-Disposition": `attachment; filename="bengalherbovibe-sales-${year ?? "all"}-${month ?? "all"}.csv"`,
     },
   });
 }

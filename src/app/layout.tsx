@@ -8,13 +8,13 @@ const geistSans = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "Hervovibe MLM",
-  description: "Hervovibe MLM Management Platform",
+  title: "Bengal Herbovibe MLM",
+  description: "Bengal Herbovibe MLM Management Platform",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Hervovibe MLM",
+    title: "Bengal Herbovibe MLM",
   },
 };
 

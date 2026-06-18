@@ -13,10 +13,8 @@ export default async function MemberLayout({
     <div className="flex flex-col min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between sticky top-0 z-40">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-green-600 flex items-center justify-center">
-            <span className="text-white text-xs font-bold">H</span>
-          </div>
-          <span className="font-bold text-gray-900 text-sm">Hervovibe</span>
+          <img src="/logo.png" alt="Bengal Herbovibe" className="w-7 h-7 rounded-lg object-cover" />
+          <span className="font-bold text-gray-900 text-sm">Bengal Herbovibe</span>
         </div>
         <div className="flex items-center gap-2">
           {session?.user?.memberId && (

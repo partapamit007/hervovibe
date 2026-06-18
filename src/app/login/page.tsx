@@ -4,7 +4,7 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Leaf, Mail, Lock, X } from "lucide-react";
+import { Mail, Lock, X } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -39,11 +39,9 @@ export default function LoginPage() {
         <div className="bg-white rounded-2xl shadow-xl p-8">
           {/* Logo */}
           <div className="flex flex-col items-center mb-8">
-            <div className="w-14 h-14 bg-green-600 rounded-full flex items-center justify-center mb-4 shadow-lg shadow-green-200">
-              <Leaf className="w-7 h-7 text-white" />
-            </div>
+            <img src="/logo.png" alt="Bengal Herbovibe" className="w-32 h-32 rounded-xl object-cover mb-2" />
             <h1 className="text-2xl font-bold text-gray-900">
-              Welcome to Hervovibe
+              Welcome to Bengal Herbovibe
             </h1>
             <p className="text-gray-500 text-sm mt-1">Sign in to your account</p>
           </div>

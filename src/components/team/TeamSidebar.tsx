@@ -43,11 +43,9 @@ export default function TeamSidebar({ user }: TeamSidebarProps) {
       >
         {!collapsed && (
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center">
-              <span className="text-white text-xs font-bold">H</span>
-            </div>
+            <img src="/logo.png" alt="Bengal Herbovibe" className="w-7 h-7 rounded-lg object-cover" />
             <div>
-              <span className="font-bold text-gray-900 text-sm block">Hervovibe</span>
+              <span className="font-bold text-gray-900 text-sm block">Bengal Herbovibe</span>
               <span className="text-blue-500 text-xs">Team Member</span>
             </div>
           </div>
