@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import bcrypt from "bcryptjs";
 import { computeIdColor } from "@/lib/idColor";
+import { generateNextMemberId } from "@/lib/member-id";
 
 const PAGE_SIZE = 20;
 
@@ -138,8 +139,11 @@ export async function POST(req: NextRequest) {
       if (existing) return NextResponse.json({ error: "Member ID already in use" }, { status: 400 });
       memberId = customMemberId.trim();
     } else {
-      const count = await prisma.user.count({ where: { role: "DISTRIBUTOR" } });
-      memberId = `HV-${String(count + 100).padStart(4, "0")}`;
+      // Auto-generate tree-based ID from sponsor
+      memberId = await generateNextMemberId(sponsorId || null);
+      // Double-check uniqueness (race condition guard)
+      const existing = await prisma.user.findFirst({ where: { memberId } });
+      if (existing) return NextResponse.json({ error: "Generated ID conflict, please retry" }, { status: 400 });
     }
 
     const chars = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";

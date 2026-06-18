@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { RefreshCw } from "lucide-react";
 
 export default function AddMemberPage() {
   const router = useRouter();
@@ -24,13 +25,77 @@ export default function AddMemberPage() {
   const [error, setError] = useState("");
   const [tempPassword, setTempPassword] = useState("");
 
+  // ID generation state
+  const [idLoading, setIdLoading] = useState(false);
+  const [idError, setIdError] = useState("");
+  const [idManual, setIdManual] = useState(false); // true = admin typed a custom ID
+  const prevSponsorKey = useRef<string>("");
+
   useEffect(() => {
     fetch("/api/members?all=1").then(r => r.json()).then(data => setSponsors(Array.isArray(data) ? data : []));
     fetch("/api/team-members").then(r => r.json()).then(data => setTeamMembers(Array.isArray(data) ? data : []));
+    // Fetch root ID preview on load (no sponsor)
+    fetchPreviewId(null);
   }, []);
+
+  async function fetchPreviewId(sponsorDbId: string | null) {
+    setIdLoading(true);
+    setIdError("");
+    try {
+      const url = sponsorDbId
+        ? `/api/members/preview-id?sponsorId=${encodeURIComponent(sponsorDbId)}`
+        : `/api/members/preview-id`;
+      const res = await fetch(url);
+      const d = await res.json();
+      if (res.ok) {
+        setForm(prev => ({ ...prev, memberId: d.memberId }));
+      } else {
+        setIdError(d.error || "Could not generate ID");
+        setForm(prev => ({ ...prev, memberId: "" }));
+      }
+    } catch {
+      setIdError("Network error generating ID");
+    }
+    setIdLoading(false);
+  }
+
+  // Auto-fetch ID whenever sponsor selection changes (unless admin has manually typed an ID)
+  useEffect(() => {
+    if (idManual) return;
+    const key = noSponsor ? "__root__" : form.sponsorId;
+    if (key === prevSponsorKey.current) return;
+    prevSponsorKey.current = key;
+
+    if (noSponsor) {
+      fetchPreviewId(null);
+    } else if (form.sponsorId) {
+      fetchPreviewId(form.sponsorId);
+    } else {
+      // No selection yet — clear ID
+      setForm(prev => ({ ...prev, memberId: "" }));
+      setIdError("");
+    }
+  }, [form.sponsorId, noSponsor, idManual]);
+
+  function handleIdChange(val: string) {
+    setIdManual(true);
+    setIdError("");
+    setForm(prev => ({ ...prev, memberId: val }));
+  }
+
+  function resetAutoId() {
+    setIdManual(false);
+    prevSponsorKey.current = ""; // force re-fetch
+    const sponsorDbId = noSponsor ? null : form.sponsorId || null;
+    fetchPreviewId(sponsorDbId);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!form.memberId.trim()) {
+      setError("Member ID is required");
+      return;
+    }
     setLoading(true);
     setError("");
     try {
@@ -60,23 +125,6 @@ export default function AddMemberPage() {
         <p className="text-gray-500 text-sm">A secure temporary password is generated automatically.</p>
       </div>
 
-      {false && (
-        <div className="mb-4 p-4 bg-green-50 border border-green-300 rounded-lg">
-          <p className="text-sm font-semibold text-green-800 mb-1">Member created successfully!</p>
-          <p className="text-sm text-green-700">
-            Share this temporary password with the member:{" "}
-            <span className="font-mono font-bold bg-white border border-green-300 px-2 py-0.5 rounded text-green-900">
-              {tempPassword}
-            </span>
-          </p>
-          <p className="text-xs text-green-600 mt-1">They should change it after first login.</p>
-          <button onClick={() => router.push("/admin/members")}
-            className="mt-2 text-sm text-green-700 underline hover:no-underline">
-            Go to members list →
-          </button>
-        </div>
-      )}
-
       <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
         ⚠️ Minimum monthly sale of <strong>₹1,260</strong> is mandatory to maintain active membership.
       </div>
@@ -87,57 +135,10 @@ export default function AddMemberPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+
+            {/* SPONSOR FIRST — ID is derived from sponsor */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Member ID</label>
-              <input
-                value={form.memberId}
-                onChange={e => setForm({ ...form, memberId: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                placeholder="HV-0100 (auto-generated if empty)"
-              />
-              <p className="text-xs text-gray-400 mt-1">Leave empty to auto-generate</p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
-              <input
-                required
-                value={form.name}
-                onChange={e => setForm({ ...form, name: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                placeholder="Rajesh Kumar"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-              <input
-                type="email"
-                value={form.email}
-                onChange={e => setForm({ ...form, email: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                placeholder="rajesh@example.com (optional)"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-              <input
-                value={form.phone}
-                onChange={e => setForm({ ...form, phone: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                placeholder="9876543210"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Date Started</label>
-              <input
-                type="date"
-                value={form.joiningDate}
-                onChange={e => setForm({ ...form, joiningDate: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-              />
-              <p className="text-xs text-gray-400 mt-1">First month sales of ₹1,260 must be recorded from this date</p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Sponsor (Upline)</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Sponsor (Upline) *</label>
               <div className="flex gap-3 mb-3">
                 <button
                   type="button"
@@ -148,7 +149,7 @@ export default function AddMemberPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setNoSponsor(true); setForm({ ...form, sponsorId: "" }); setSponsorSearch(""); }}
+                  onClick={() => { setNoSponsor(true); setForm(prev => ({ ...prev, sponsorId: "" })); setSponsorSearch(""); }}
                   className={`flex-1 py-2 px-3 rounded-md border text-sm font-medium transition-all ${noSponsor ? "bg-orange-500 text-white border-orange-500" : "bg-white text-gray-600 border-gray-300 hover:border-gray-400"}`}
                 >
                   Direct / No Sponsor
@@ -169,7 +170,7 @@ export default function AddMemberPage() {
                   />
                   <select
                     value={form.sponsorId}
-                    onChange={e => setForm({ ...form, sponsorId: e.target.value })}
+                    onChange={e => setForm(prev => ({ ...prev, sponsorId: e.target.value }))}
                     size={5}
                     className="w-full px-3 py-2 border border-gray-300 rounded-b-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                   >
@@ -181,18 +182,102 @@ export default function AddMemberPage() {
                       })
                       .map((s: any) => {
                         const filled = s._count?.downline || 0;
-                        const label = filled >= 6 ? `✓ ${filled} members` : `${filled}/6 min`;
+                        const full = filled >= 6;
                         return (
-                          <option key={s.id} value={s.id}>
-                            [{s.memberId}] — {s.name} ({label})
+                          <option key={s.id} value={s.id} disabled={full}>
+                            [{s.memberId}] — {s.name} ({filled}/6){full ? " FULL" : ""}
                           </option>
                         );
                       })}
                   </select>
-                  <p className="text-xs text-gray-400 mt-1">Minimum 6 direct members required for rank qualification</p>
+                  <p className="text-xs text-gray-400 mt-1">Members showing FULL cannot accept more direct recruits</p>
                 </>
               )}
             </div>
+
+            {/* MEMBER ID — auto-generated from sponsor path */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Member ID <span className="text-red-500">*</span>
+                <span className="ml-2 text-xs font-normal text-gray-400">(auto-generated from sponsor path)</span>
+              </label>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <input
+                    value={form.memberId}
+                    onChange={e => handleIdChange(e.target.value)}
+                    required
+                    className={`w-full px-3 py-2 border rounded-md text-sm font-mono focus:outline-none focus:ring-2 focus:ring-green-500 ${
+                      idError ? "border-red-400" : "border-gray-300"
+                    }`}
+                    placeholder={idLoading ? "Generating..." : "Select sponsor first"}
+                  />
+                  {idLoading && (
+                    <span className="absolute right-3 top-2.5 text-xs text-gray-400 animate-pulse">generating...</span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={resetAutoId}
+                  title="Re-generate ID"
+                  className="px-2.5 py-2 border border-gray-300 rounded-md text-gray-500 hover:text-green-600 hover:border-green-400 transition-colors"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                </button>
+              </div>
+              {idError && <p className="text-xs text-red-500 mt-1">{idError}</p>}
+              {!idError && form.memberId && !idLoading && (
+                <p className="text-xs text-green-600 mt-1 font-mono">
+                  Level {form.memberId.split("/").length} — Path: <strong>{form.memberId}</strong>
+                  {idManual && <span className="ml-2 text-orange-500">(custom — click ↻ to reset)</span>}
+                </p>
+              )}
+            </div>
+
+            {/* FULL NAME */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Full Name <span className="text-red-500">*</span></label>
+              <input
+                required
+                value={form.name}
+                onChange={e => setForm({ ...form, name: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                placeholder="Rajesh Kumar"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <input
+                type="email"
+                value={form.email}
+                onChange={e => setForm({ ...form, email: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                placeholder="rajesh@example.com (optional)"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+              <input
+                value={form.phone}
+                onChange={e => setForm({ ...form, phone: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                placeholder="9876543210"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Date Started</label>
+              <input
+                type="date"
+                value={form.joiningDate}
+                onChange={e => setForm({ ...form, joiningDate: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+              <p className="text-xs text-gray-400 mt-1">First month sales of ₹1,260 must be recorded from this date</p>
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Assigned Team Member</label>
               <select
@@ -206,6 +291,7 @@ export default function AddMemberPage() {
                 ))}
               </select>
             </div>
+
             <div className="pt-2 border-t border-gray-100">
               <p className="text-sm font-semibold text-gray-700 mb-3">KYC / Identity</p>
               <div className="space-y-4">
@@ -288,9 +374,11 @@ export default function AddMemberPage() {
             </div>
 
             {error && <p className="text-red-500 text-sm">{error}</p>}
+
             {tempPassword && (
               <div className="p-4 bg-green-50 border border-green-300 rounded-lg">
                 <p className="text-sm font-semibold text-green-800 mb-1">✅ Member created successfully!</p>
+                <p className="text-xs text-green-700 mb-1 font-mono">Member ID: <strong>{form.memberId}</strong></p>
                 <p className="text-sm text-green-700 mb-2">Temporary password:&nbsp;
                   <span className="font-mono font-bold bg-white border border-green-300 px-2 py-0.5 rounded text-green-900">{tempPassword}</span>
                 </p>
@@ -299,16 +387,23 @@ export default function AddMemberPage() {
                     className="text-sm text-white bg-green-600 px-3 py-1.5 rounded hover:bg-green-700">
                     Go to Members List
                   </button>
-                  <button type="button" onClick={() => { setTempPassword(""); setForm({ name: "", email: "", phone: "", memberId: "", sponsorId: "", managedBy: "", joiningDate: today, panNumber: "", aadhaarNumber: "", address: "", bankName: "", bankAccount: "", ifscCode: "", upiId: "" }); }}
+                  <button type="button" onClick={() => {
+                    setTempPassword("");
+                    setIdManual(false);
+                    prevSponsorKey.current = "";
+                    setForm({ name: "", email: "", phone: "", memberId: "", sponsorId: "", managedBy: "", joiningDate: today, panNumber: "", aadhaarNumber: "", address: "", bankName: "", bankAccount: "", ifscCode: "", upiId: "" });
+                    fetchPreviewId(null);
+                  }}
                     className="text-sm text-green-700 underline">
                     Add Another Member
                   </button>
                 </div>
               </div>
             )}
+
             {!tempPassword && (
               <div className="flex gap-3 pt-2">
-                <Button type="submit" disabled={loading} className="bg-green-600 hover:bg-green-700">
+                <Button type="submit" disabled={loading || idLoading || !!idError} className="bg-green-600 hover:bg-green-700">
                   {loading ? "Adding..." : "Add Member"}
                 </Button>
                 <Button type="button" variant="outline" onClick={() => router.back()}>Cancel</Button>
