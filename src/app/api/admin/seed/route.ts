@@ -26,10 +26,27 @@ const LAST = [
   "Tripathi","Saxena","Awasthi","Bajpai","Srivastava","Thakur","Garg","Nair","Iyer","Chauhan",
 ];
 
-export async function POST(_req: NextRequest) {
+export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session || session.user.role !== "MASTER_ADMIN")
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { searchParams } = new URL(req.url);
+
+  // ── 0. Wipe all existing distributors + their sales ──
+  const oldDistributors = await prisma.user.findMany({
+    where: { role: "DISTRIBUTOR" },
+    select: { id: true },
+  });
+  const oldIds = oldDistributors.map(u => u.id);
+  if (oldIds.length > 0) {
+    await prisma.sale.deleteMany({ where: { memberId: { in: oldIds } } });
+    await prisma.user.updateMany({ where: { id: { in: oldIds } }, data: { sponsorId: null } });
+    await prisma.user.deleteMany({ where: { id: { in: oldIds } } });
+  }
+
+  if (searchParams.get("wipeOnly") === "1")
+    return NextResponse.json({ success: true, message: `Wiped ${oldIds.length} distributors and their sales.` });
 
   const now   = new Date();
   const MONTH = now.getMonth() + 1;
@@ -42,19 +59,6 @@ export async function POST(_req: NextRequest) {
   }
   const pm1 = prevMonth(1);
   const pm2 = prevMonth(2);
-
-  // ── 0. Wipe all existing distributors + their sales for a clean slate ──
-  const oldDistributors = await prisma.user.findMany({
-    where: { role: "DISTRIBUTOR" },
-    select: { id: true },
-  });
-  const oldIds = oldDistributors.map(u => u.id);
-  if (oldIds.length > 0) {
-    await prisma.sale.deleteMany({ where: { memberId: { in: oldIds } } });
-    // clear sponsorId references first to avoid FK constraint errors
-    await prisma.user.updateMany({ where: { id: { in: oldIds } }, data: { sponsorId: null } });
-    await prisma.user.deleteMany({ where: { id: { in: oldIds } } });
-  }
 
   // Hash password only ONCE — reused for all 165 members
   const PASS = await bcrypt.hash("Member@123", 10);
