@@ -17,6 +17,7 @@ export async function generateNextMemberId(sponsorDbId: string | null | undefine
     });
     const usedNums = roots
       .map((r) => {
+        if (!r.memberId) return null;
         const m = r.memberId.match(/^[A-Z]+-(\d+)$/);
         return m ? parseInt(m[1]) : null;
       })
