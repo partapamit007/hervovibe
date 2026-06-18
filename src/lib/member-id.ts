@@ -32,7 +32,7 @@ export async function generateNextMemberId(sponsorDbId: string | null | undefine
     where: { id: sponsorDbId },
     select: { memberId: true },
   });
-  if (!sponsor) throw new Error("Sponsor not found");
+  if (!sponsor || !sponsor.memberId) throw new Error("Sponsor not found");
 
   const children = await prisma.user.findMany({
     where: { sponsorId: sponsorDbId, deletedAt: null },
