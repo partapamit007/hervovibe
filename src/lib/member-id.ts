@@ -45,6 +45,7 @@ export async function generateNextMemberId(sponsorDbId: string | null | undefine
   // Find used child positions (last segment after final "/")
   const usedPositions = children
     .map((c) => {
+      if (!c.memberId) return NaN;
       const parts = c.memberId.split("/");
       return parseInt(parts[parts.length - 1]);
     })
