@@ -10,9 +10,9 @@ export const MEMBER_PREFIX = process.env.MEMBER_ID_PREFIX ?? "BHV";
  */
 export async function generateNextMemberId(sponsorDbId: string | null | undefined): Promise<string> {
   if (!sponsorDbId) {
-    // Root member — find next unused root number
+    // Root member — find next unused root number (include deleted to never reuse IDs)
     const roots = await prisma.user.findMany({
-      where: { role: "DISTRIBUTOR", sponsorId: null, deletedAt: null },
+      where: { role: "DISTRIBUTOR", sponsorId: null },
       select: { memberId: true },
     });
     const usedNums = roots
