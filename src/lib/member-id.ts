@@ -34,16 +34,23 @@ export async function generateNextMemberId(sponsorDbId: string | null | undefine
   });
   if (!sponsor || !sponsor.memberId) throw new Error("Sponsor not found");
 
-  const children = await prisma.user.findMany({
+  // Count only ACTIVE children for the 6-slot fullness check
+  const activeChildren = await prisma.user.findMany({
     where: { sponsorId: sponsorDbId, deletedAt: null },
     select: { memberId: true },
   });
 
-  if (children.length >= 6)
+  if (activeChildren.length >= 6)
     throw new Error("This parent already has 6 direct members. Please select another sponsor.");
 
+  // Include soft-deleted members when finding used positions — never reuse a position number
+  const allChildren = await prisma.user.findMany({
+    where: { sponsorId: sponsorDbId },
+    select: { memberId: true },
+  });
+
   // Find used child positions (last segment after final "/")
-  const usedPositions = children
+  const usedPositions = allChildren
     .map((c) => {
       if (!c.memberId) return NaN;
       const parts = c.memberId.split("/");
