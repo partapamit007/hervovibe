@@ -182,15 +182,14 @@ export default function AddMemberPage() {
                       })
                       .map((s: any) => {
                         const filled = s._count?.downline || 0;
-                        const full = filled >= 6;
                         return (
-                          <option key={s.id} value={s.id} disabled={full}>
-                            [{s.memberId}] — {s.name} ({filled}/6){full ? " FULL" : ""}
+                          <option key={s.id} value={s.id}>
+                            [{s.memberId}] — {s.name} ({filled} members)
                           </option>
                         );
                       })}
                   </select>
-                  <p className="text-xs text-gray-400 mt-1">Members showing FULL cannot accept more direct recruits</p>
+                  <p className="text-xs text-gray-400 mt-1">Any member can accept unlimited direct recruits</p>
                 </>
               )}
             </div>

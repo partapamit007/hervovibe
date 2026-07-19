@@ -6,7 +6,7 @@ export const MEMBER_PREFIX = process.env.MEMBER_ID_PREFIX ?? "BHV";
 /**
  * Generates the next available member ID.
  * - Root (no sponsor): BHV-1, BHV-2, ...
- * - Child: parentId/1, parentId/2, ... up to /6
+ * - Child: parentId/1, parentId/2, ... (unlimited)
  */
 export async function generateNextMemberId(sponsorDbId: string | null | undefined): Promise<string> {
   if (!sponsorDbId) {
@@ -34,15 +34,6 @@ export async function generateNextMemberId(sponsorDbId: string | null | undefine
   });
   if (!sponsor || !sponsor.memberId) throw new Error("Sponsor not found");
 
-  // Count only ACTIVE children for the 6-slot fullness check
-  const activeChildren = await prisma.user.findMany({
-    where: { sponsorId: sponsorDbId, deletedAt: null },
-    select: { memberId: true },
-  });
-
-  if (activeChildren.length >= 6)
-    throw new Error("This parent already has 6 direct members. Please select another sponsor.");
-
   // Include soft-deleted members when finding used positions — never reuse a position number
   const allChildren = await prisma.user.findMany({
     where: { sponsorId: sponsorDbId },
@@ -58,13 +49,10 @@ export async function generateNextMemberId(sponsorDbId: string | null | undefine
     })
     .filter((n) => !isNaN(n));
 
-  for (let i = 1; i <= 6; i++) {
-    if (!usedPositions.includes(i)) {
-      return `${sponsor.memberId}/${i}`;
-    }
-  }
-
-  throw new Error("No positions available under this parent.");
+  // Unlimited children — find next unused position number
+  let i = 1;
+  while (usedPositions.includes(i)) i++;
+  return `${sponsor.memberId}/${i}`;
 }
 
 /** Derives depth level from memberId: BHV-1 = 1, BHV-1/1 = 2, BHV-1/1/3 = 3 */

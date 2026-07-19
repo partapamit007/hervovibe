@@ -14,16 +14,11 @@ export async function GET(req: NextRequest) {
   try {
     const memberId = await generateNextMemberId(sponsorId);
 
-    // How many children does this parent currently have?
     const childCount = sponsorId
       ? await prisma.user.count({ where: { sponsorId, deletedAt: null } })
       : null;
 
-    return NextResponse.json({
-      memberId,
-      childCount,
-      parentFull: childCount !== null && childCount >= 6,
-    });
+    return NextResponse.json({ memberId, childCount, parentFull: false });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 400 });
   }
