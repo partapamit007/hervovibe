@@ -2,21 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 
-// Recursively collect all downline IDs using BFS
+// BFS by level — 1 query per depth level instead of 1 per member
 async function getAllDownlineIds(memberId: string): Promise<string[]> {
   const ids: string[] = [];
-  const queue = [memberId];
-
-  while (queue.length > 0) {
-    const current = queue.shift()!;
+  let level = [memberId];
+  while (level.length > 0) {
     const children = await prisma.user.findMany({
-      where: { sponsorId: current, deletedAt: null },
+      where: { sponsorId: { in: level }, deletedAt: null },
       select: { id: true },
     });
-    for (const c of children) {
-      ids.push(c.id);
-      queue.push(c.id);
-    }
+    const childIds = children.map((c) => c.id);
+    ids.push(...childIds);
+    level = childIds;
   }
   return ids;
 }
@@ -30,7 +27,6 @@ export async function GET(req: NextRequest) {
   const year     = parseInt(searchParams.get("year")  || String(new Date().getFullYear()));
   const memberId = searchParams.get("memberId") || session.user.id;
 
-  // Only admin can query other members; members can only query themselves
   if (memberId !== session.user.id && session.user.role === "DISTRIBUTOR")
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 

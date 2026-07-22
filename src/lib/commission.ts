@@ -27,7 +27,13 @@ async function getBiBaseRate(): Promise<number> {
   return config ? config.baseRate / 100 : 0.01;
 }
 
+const COMM_BASE = 1800; // business commission always on fixed ₹1,800 base, not actual sale amount
+
 export async function calculateCommissions(saleId: string) {
+  // Idempotency guard — if commissions already exist for this sale, skip
+  const existing = await prisma.commissionRecord.findFirst({ where: { saleId } });
+  if (existing) return;
+
   const sale = await prisma.sale.findUnique({
     where: { id: saleId },
     include: {
@@ -55,8 +61,8 @@ export async function calculateCommissions(saleId: string) {
     year: sale.year,
   };
 
-  // 1. Seller's 8% BUSINESS commission
-  records.push({ ...base, memberId: sale.memberId, type: "BUSINESS", amount: sale.amount * 0.08, depth: 0 });
+  // 1. Seller's 8% BUSINESS commission — always on fixed ₹1,800 base
+  records.push({ ...base, memberId: sale.memberId, type: "BUSINESS", amount: COMM_BASE * 0.08, depth: 0 });
 
   // 2. Seller's PI and BI = piRate% / biRate% of MRP per product per unit
   let totalSellerPI = 0;
@@ -85,8 +91,8 @@ export async function calculateCommissions(saleId: string) {
   const uplineChain: { id: string; rank: string; sponsorId: string | null }[] = [];
   let curSponsorId = sale.member.sponsorId;
   while (curSponsorId) {
-    const upline = await prisma.user.findUnique({
-      where: { id: curSponsorId },
+    const upline = await prisma.user.findFirst({
+      where: { id: curSponsorId, deletedAt: null },
       select: { id: true, rank: true, sponsorId: true },
     });
     if (!upline) break;
@@ -121,7 +127,7 @@ export async function calculateCommissions(saleId: string) {
     const depth = idx + 1;
     const maxDepth = RANK_MAX_DEPTH[upline.rank] ?? 0;
     if (maxDepth >= depth && DEPTH_PCT[depth]) {
-      records.push({ ...base, memberId: upline.id, type: "BUSINESS", amount: sale.amount * DEPTH_PCT[depth], depth });
+      records.push({ ...base, memberId: upline.id, type: "BUSINESS", amount: COMM_BASE * DEPTH_PCT[depth], depth });
     }
   });
 

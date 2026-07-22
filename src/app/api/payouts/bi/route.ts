@@ -69,8 +69,19 @@ export async function POST(req: NextRequest) {
   if (!period || !fromMonth || !fromYear || !toMonth || !toYear || !Array.isArray(members) || members.length === 0)
     return NextResponse.json({ error: "period, date range, and members required" }, { status: 400 });
 
+  // Duplicate guard — skip members already paid for this period
+  const alreadyPaid = await prisma.biPayoutRecord.findMany({
+    where: { period, memberId: { in: members.map((m: any) => m.memberId) } },
+    select: { memberId: true },
+  });
+  const paidSet = new Set(alreadyPaid.map((r) => r.memberId));
+  const newMembers = members.filter((m: any) => !paidSet.has(m.memberId));
+
+  if (newMembers.length === 0)
+    return NextResponse.json({ error: "All members already paid for this period", alreadyPaid: alreadyPaid.length }, { status: 409 });
+
   const created = await prisma.biPayoutRecord.createMany({
-    data: members.map((m: { memberId: string; amount: number }) => ({
+    data: newMembers.map((m: { memberId: string; amount: number }) => ({
       memberId:  m.memberId,
       period,
       fromMonth: parseInt(fromMonth),
@@ -81,7 +92,7 @@ export async function POST(req: NextRequest) {
     })),
   });
 
-  return NextResponse.json({ created: created.count }, { status: 201 });
+  return NextResponse.json({ created: created.count, skipped: paidSet.size }, { status: 201 });
 }
 
 export async function DELETE(req: NextRequest) {

@@ -11,16 +11,8 @@ const RANK_MIN_TEAM_DISPLAY: Record<string, string> = {
   DIAMOND: "1,296", SUPER_DIAMOND: "7,776", PLATINUM: "46,656", CENTENNIAL: "2,79,936",
 };
 
-const rankTargets: Record<string, number> = {
-  DISTRIBUTOR:   1260,
-  BRONZE:        7560,
-  SILVER:        45360,
-  GOLDEN:        272160,
-  DIAMOND:       1632960,
-  SUPER_DIAMOND: 9797760,
-  PLATINUM:      58786560,
-  CENTENNIAL:    0,
-};
+// Progress bar tracks personal monthly minimum (₹1,260) — not team volume
+const PERSONAL_TARGET = 1260;
 
 const rankOrder = [
   "DISTRIBUTOR","BRONZE","SILVER","GOLDEN","DIAMOND","SUPER_DIAMOND","PLATINUM","CENTENNIAL",
@@ -69,9 +61,8 @@ export default async function RankPage() {
   ]);
 
   const rank = member?.rank ?? "DISTRIBUTOR";
-  const target = rankTargets[rank] ?? 1260;
   const currentSales = monthSalesAgg._sum.amount ?? 0;
-  const progress = target > 0 ? Math.min((currentSales / target) * 100, 100) : 100;
+  const progress = Math.min((currentSales / PERSONAL_TARGET) * 100, 100);
   const currentRankIndex = rankOrder.indexOf(rank);
 
   // Level-by-level BFS — 1 query per depth level, max 8
@@ -129,7 +120,7 @@ export default async function RankPage() {
           <div className="flex justify-between text-sm mb-2">
             <span className="text-gray-600 font-medium">This Month Sales</span>
             <span className="font-bold text-gray-900">
-              ₹{currentSales.toLocaleString("en-IN")} / ₹{target.toLocaleString("en-IN")}
+              ₹{currentSales.toLocaleString("en-IN")} / ₹{PERSONAL_TARGET.toLocaleString("en-IN")} min
             </span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2.5 mb-2">
@@ -141,14 +132,14 @@ export default async function RankPage() {
             />
           </div>
           <div className="flex justify-between text-xs text-gray-500">
-            <span>{progress.toFixed(0)}% of target</span>
-            {currentSales < target && (
+            <span>{progress.toFixed(0)}% of monthly minimum</span>
+            {currentSales < PERSONAL_TARGET && (
               <span>
-                ₹{(target - currentSales).toLocaleString("en-IN")} remaining
+                ₹{(PERSONAL_TARGET - currentSales).toLocaleString("en-IN")} remaining
               </span>
             )}
-            {currentSales >= target && (
-              <span className="text-green-600 font-medium">Target met!</span>
+            {currentSales >= PERSONAL_TARGET && (
+              <span className="text-green-600 font-medium">Minimum met ✓</span>
             )}
           </div>
         </CardContent>

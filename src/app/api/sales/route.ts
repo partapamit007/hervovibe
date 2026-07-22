@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
   }
 
   // If products selected, compute amount from MRP; otherwise use manual amount
-  let finalAmount = parseFloat(amount || "0");
+  let finalAmount = 0;
   const saleItems: { productId: string; quantity: number; mrpAtSale: number }[] = [];
 
   if (items && items.length > 0) {
@@ -38,8 +38,10 @@ export async function POST(req: NextRequest) {
       saleItems.push({ productId: product.id, quantity: qty, mrpAtSale: product.mrp });
       finalAmount += product.mrp * qty;
     }
-    // If amount was also manually entered, use the larger value (manual overrides auto)
+    // Manual override only if explicitly higher than computed product total
     if (parseFloat(amount || "0") > finalAmount) finalAmount = parseFloat(amount);
+  } else {
+    finalAmount = parseFloat(amount || "0");
   }
 
   if (!finalAmount || finalAmount <= 0)
@@ -106,7 +108,7 @@ export async function GET(req: NextRequest) {
       enteredBy: { select: { name: true } },
     },
     orderBy: { createdAt: "desc" },
-    take: 100,
+    take: 1000,
   });
   return NextResponse.json(sales);
 }

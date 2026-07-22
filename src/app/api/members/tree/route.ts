@@ -2,34 +2,37 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 
-async function buildTree(userId: string, depth = 0): Promise<any> {
-  if (depth > 8) return null;
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: {
-      id: true, name: true, memberId: true, rank: true, status: true,
-      downline: { where: { deletedAt: null }, select: { id: true } },
-    },
-  });
-  if (!user) return null;
-
-  const children = await Promise.all(
-    user.downline.map((d) => buildTree(d.id, depth + 1))
-  );
-
-  return { ...user, children: children.filter(Boolean) };
-}
-
 export async function GET() {
   const session = await auth();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session || session.user.role !== "MASTER_ADMIN")
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  // Get all root members (no sponsor)
-  const roots = await prisma.user.findMany({
-    where: { role: "DISTRIBUTOR", sponsorId: null, deletedAt: null },
-    select: { id: true },
+  // Fetch all members in one query, build tree in memory — avoids N+1
+  const allMembers = await prisma.user.findMany({
+    where: { role: "DISTRIBUTOR", deletedAt: null },
+    select: { id: true, name: true, memberId: true, rank: true, status: true, sponsorId: true },
+    orderBy: { createdAt: "asc" },
   });
 
-  const trees = await Promise.all(roots.map((r) => buildTree(r.id)));
-  return NextResponse.json(trees.filter(Boolean));
+  type TreeNode = {
+    id: string; name: string; memberId: string; rank: string;
+    status: string; children: TreeNode[];
+  };
+
+  const nodeMap = new Map<string, TreeNode>();
+  for (const m of allMembers) {
+    nodeMap.set(m.id, { id: m.id, name: m.name, memberId: m.memberId, rank: m.rank, status: m.status, children: [] });
+  }
+
+  const roots: TreeNode[] = [];
+  for (const m of allMembers) {
+    const node = nodeMap.get(m.id)!;
+    if (m.sponsorId && nodeMap.has(m.sponsorId)) {
+      nodeMap.get(m.sponsorId)!.children.push(node);
+    } else {
+      roots.push(node);
+    }
+  }
+
+  return NextResponse.json(roots);
 }

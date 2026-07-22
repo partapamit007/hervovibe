@@ -10,6 +10,11 @@ import { idColorStyles, type IdColor } from "@/lib/idColor";
 
 const rankOrder = ["DISTRIBUTOR","BRONZE","SILVER","GOLDEN","DIAMOND","SUPER_DIAMOND","PLATINUM","CENTENNIAL"];
 
+const RANK_MIN_DIRECT: Record<string, number> = {
+  DISTRIBUTOR: 0, BRONZE: 6, SILVER: 6, GOLDEN: 6,
+  DIAMOND: 6, SUPER_DIAMOND: 6, PLATINUM: 6, CENTENNIAL: 6,
+};
+
 const rankColors: Record<string, string> = {
   DISTRIBUTOR:   "bg-gray-100 text-gray-700",
   BRONZE:        "bg-amber-100 text-amber-700",
@@ -151,7 +156,11 @@ export default function MembersPage() {
                         </div>
                         <Badge className={`text-xs ${statusColors[m.status]}`}>{m.status}</Badge>
                         <span className={`text-xs font-medium ${m._count.downline >= 6 ? "text-green-600" : m._count.downline > 0 ? "text-amber-600" : "text-gray-400"}`}>
-                          {m._count.downline >= 6 ? `✓ ${m._count.downline} members` : `${m._count.downline}/6 min`}
+                          {m.rank === "DISTRIBUTOR"
+                            ? `${m._count.downline} direct`
+                            : m._count.downline >= 6
+                              ? `✓ ${m._count.downline} direct`
+                              : `${m._count.downline}/${RANK_MIN_DIRECT[m.rank] ?? 6} direct`}
                         </span>
                       </div>
                     </div>
