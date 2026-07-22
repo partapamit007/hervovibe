@@ -82,12 +82,12 @@ export default async function MemberDashboard() {
   const ownSales = thisMonthSales._sum.amount ?? 0;
   const qualifies = ownSales >= 1260;
   const salary    = qualifies ? (RANK_SALARY[rank] ?? 0) : 0;
-  const idColor   = computeIdColor(colorSales, month, year);
+  const idColor   = computeIdColor(colorSales, month, year, member?.joiningDate);
 
   // Direct downline with their ID colors
   const directDownline = await prisma.user.findMany({
     where: { sponsorId: userId, deletedAt: null },
-    select: { id: true, name: true, memberId: true, rank: true },
+    select: { id: true, name: true, memberId: true, rank: true, joiningDate: true },
   });
 
   const directIds = directDownline.map((d) => d.id);
@@ -100,7 +100,7 @@ export default async function MemberDashboard() {
 
   const downlineWithColors = directDownline.map((d) => {
     const sales = downlineSalesRaw.filter((s) => s.memberId === d.id);
-    return { ...d, idColor: computeIdColor(sales, month, year) };
+    return { ...d, idColor: computeIdColor(sales, month, year, d.joiningDate) };
   });
 
   // Full downline GREEN count for rank progress (one CTE + one aggregation)

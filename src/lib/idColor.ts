@@ -3,18 +3,27 @@ export type IdColor = "GREEN" | "YELLOW" | "RED" | "BLACK";
 export function computeIdColor(
   sales: { month: number; year: number; amount: number }[],
   forMonth: number,
-  forYear: number
+  forYear: number,
+  joinedAt?: Date | null
 ): IdColor {
   function monthAmount(m: number, y: number) {
     return sales.filter((s) => s.month === m && s.year === y).reduce((sum, s) => sum + s.amount, 0);
   }
 
-  // BLACK: last 3 consecutive months all had zero sales
+  function toAbsMonth(m: number, y: number) { return y * 12 + m; }
+
+  // Months before the member joined cannot count as zero-sale months
+  const joinAbsMonth = joinedAt
+    ? toAbsMonth(joinedAt.getMonth() + 1, joinedAt.getFullYear())
+    : 0;
+
+  // BLACK: last 3 consecutive months all had zero sales (only months after joining count)
   let zeroStreak = 0;
   for (let i = 1; i <= 3; i++) {
     let m = forMonth - i;
     let y = forYear;
     if (m <= 0) { m += 12; y -= 1; }
+    if (joinedAt && toAbsMonth(m, y) < joinAbsMonth) break; // month predates membership
     if (monthAmount(m, y) === 0) zeroStreak++;
     else break;
   }

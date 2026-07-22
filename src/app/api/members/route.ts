@@ -78,7 +78,7 @@ export async function GET(req: NextRequest) {
     const allMembers = await prisma.user.findMany({ where, select: memberSelect, orderBy: { joiningDate: "desc" } });
     const allWithColor = allMembers.map((m) => ({
       ...m,
-      idColor: computeIdColor(m.salesEntries, curMonth, curYear),
+      idColor: computeIdColor(m.salesEntries, curMonth, curYear, m.joiningDate),
       salesEntries: undefined,
     }));
     const filtered = allWithColor.filter((m) => m.idColor === idColorParam);
@@ -105,7 +105,7 @@ export async function GET(req: NextRequest) {
 
   const membersWithColor = members.map((m) => ({
     ...m,
-    idColor: computeIdColor(m.salesEntries, curMonth, curYear),
+    idColor: computeIdColor(m.salesEntries, curMonth, curYear, m.joiningDate),
     salesEntries: undefined,
   }));
 
