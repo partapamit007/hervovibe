@@ -194,7 +194,6 @@ export default async function RankPage() {
               const isCurrent = r === rank;
               const isAchieved = i < currentRankIndex;
               const isLocked = i > currentRankIndex;
-              const rTarget = rankTargets[r];
 
               return (
                 <div
