@@ -80,9 +80,14 @@ export async function GET(req: NextRequest) {
   }
 
   // Commissions for this month — BI excluded (paid separately via BI Release)
-  // Exclude commissions from soft-deleted sales
+  // Exclude commissions from soft-deleted sales (filter by active saleIds)
+  const activeSaleIds = await prisma.sale.findMany({
+    where: { month, year, deletedAt: null },
+    select: { id: true },
+  }).then((rows) => rows.map((r) => r.id));
+
   const commissions = await prisma.commissionRecord.findMany({
-    where: { month, year, sale: { deletedAt: null } },
+    where: { month, year, saleId: { in: activeSaleIds } },
     select: { memberId: true, type: true, amount: true },
   });
 
