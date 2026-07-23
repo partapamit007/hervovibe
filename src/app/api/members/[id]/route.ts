@@ -85,7 +85,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       ...(rank         !== undefined && { rank }),
       ...(sponsorId    !== undefined && { sponsorId }),
       ...(managedBy    !== undefined && { managedBy }),
-      ...(joiningDate  !== undefined && { joiningDate: new Date(joiningDate) }),
+      ...(joiningDate  !== undefined && joiningDate && !isNaN(new Date(joiningDate).getTime()) && new Date(joiningDate).getFullYear() > 1971 && { joiningDate: new Date(joiningDate) }),
       ...(panNumber    !== undefined && { panNumber }),
       ...(aadhaarNumber !== undefined && { aadhaarNumber }),
       ...(address      !== undefined && { address }),

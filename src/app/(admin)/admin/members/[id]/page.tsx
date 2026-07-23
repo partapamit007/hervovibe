@@ -222,11 +222,9 @@ export default function MemberDetailPage() {
           <CardContent className="p-4">
             <p className="text-xs text-gray-500">Date Started</p>
             <p className="text-sm font-medium text-gray-800">
-              {new Date(member.joiningDate).toLocaleDateString("en-IN", {
-                day: "2-digit",
-                month: "short",
-                year: "numeric",
-              })}
+              {member.joiningDate && new Date(member.joiningDate).getFullYear() > 1971
+                ? new Date(member.joiningDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
+                : "—"}
             </p>
           </CardContent>
         </Card>

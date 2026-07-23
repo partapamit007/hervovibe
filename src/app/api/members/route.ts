@@ -160,7 +160,7 @@ export async function POST(req: NextRequest) {
         name: name.trim(), email: resolvedEmail, phone: phone || null, memberId, password,
         role: "DISTRIBUTOR",
         rank: "DISTRIBUTOR",
-        joiningDate: joiningDate ? new Date(joiningDate) : new Date(),
+        joiningDate: (joiningDate && !isNaN(new Date(joiningDate).getTime()) && new Date(joiningDate).getFullYear() > 1971) ? new Date(joiningDate) : new Date(),
         ...(sponsorId     && { sponsorId }),
         ...(managedBy     && { managedBy }),
         ...(panNumber     && { panNumber }),
