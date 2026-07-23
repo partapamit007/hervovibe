@@ -15,7 +15,7 @@ export async function GET() {
   });
 
   type TreeNode = {
-    id: string; name: string; memberId: string; rank: string;
+    id: string; name: string; memberId: string | null; rank: string;
     status: string; children: TreeNode[];
   };
 
