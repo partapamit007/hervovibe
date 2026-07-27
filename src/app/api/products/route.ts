@@ -18,18 +18,20 @@ export async function POST(req: NextRequest) {
   if (!session || session.user.role !== "MASTER_ADMIN")
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { name, mrp, piRate, piUpline, biRate, biUpline } = await req.json();
+  const { name, mrp, piRate, piUpline, biRate, biUpline, stock, lowStockAlert } = await req.json();
   if (!name || !mrp)
     return NextResponse.json({ error: "Name and MRP are required" }, { status: 400 });
 
   const product = await prisma.product.create({
     data: {
       name,
-      mrp:      parseFloat(mrp),
-      piRate:   parseFloat(piRate   ?? "10"),
-      piUpline: parseFloat(piUpline ?? "5"),
-      biRate:   parseFloat(biRate   ?? "1"),
-      biUpline: parseFloat(biUpline ?? "0.5"),
+      mrp:           parseFloat(mrp),
+      piRate:        parseFloat(piRate        ?? "10"),
+      piUpline:      parseFloat(piUpline      ?? "5"),
+      biRate:        parseFloat(biRate        ?? "1"),
+      biUpline:      parseFloat(biUpline      ?? "0.5"),
+      stock:         parseInt(stock           ?? "0"),
+      lowStockAlert: parseInt(lowStockAlert   ?? "10"),
     },
   });
   return NextResponse.json(product, { status: 201 });
@@ -40,19 +42,22 @@ export async function PATCH(req: NextRequest) {
   if (!session || session.user.role !== "MASTER_ADMIN")
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { id, name, mrp, piRate, piUpline, biRate, biUpline, isActive } = await req.json();
+  const { id, name, mrp, piRate, piUpline, biRate, biUpline, isActive, stock, lowStockAlert, stockAdjust } = await req.json();
   if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
 
   const product = await prisma.product.update({
     where: { id },
     data: {
-      ...(name     !== undefined && { name }),
-      ...(mrp      !== undefined && { mrp:      parseFloat(mrp) }),
-      ...(piRate   !== undefined && { piRate:   parseFloat(piRate) }),
-      ...(piUpline !== undefined && { piUpline: parseFloat(piUpline) }),
-      ...(biRate   !== undefined && { biRate:   parseFloat(biRate) }),
-      ...(biUpline !== undefined && { biUpline: parseFloat(biUpline) }),
-      ...(isActive !== undefined && { isActive }),
+      ...(name          !== undefined && { name }),
+      ...(mrp           !== undefined && { mrp:           parseFloat(mrp) }),
+      ...(piRate        !== undefined && { piRate:        parseFloat(piRate) }),
+      ...(piUpline      !== undefined && { piUpline:      parseFloat(piUpline) }),
+      ...(biRate        !== undefined && { biRate:        parseFloat(biRate) }),
+      ...(biUpline      !== undefined && { biUpline:      parseFloat(biUpline) }),
+      ...(isActive      !== undefined && { isActive }),
+      ...(stock         !== undefined && { stock:         parseInt(stock) }),
+      ...(lowStockAlert !== undefined && { lowStockAlert: parseInt(lowStockAlert) }),
+      ...(stockAdjust   !== undefined && { stock:         { increment: parseInt(stockAdjust) } }),
     },
   });
   return NextResponse.json(product);

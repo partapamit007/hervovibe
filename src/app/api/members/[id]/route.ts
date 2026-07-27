@@ -19,6 +19,15 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
       salesEntries: {
         where: { deletedAt: null },
         orderBy: { createdAt: "desc" },
+        include: {
+          saleItems: {
+            include: { product: { select: { id: true, name: true, mrp: true } } },
+          },
+          commissionRecords: {
+            where: { memberId: id, depth: 0 },
+            select: { type: true, amount: true },
+          },
+        },
       },
       piEntries: { orderBy: { createdAt: "desc" }, take: 6 },
       biEntries: { orderBy: { createdAt: "desc" }, take: 6 },

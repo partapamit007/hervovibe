@@ -27,11 +27,13 @@ const years = Array.from({ length: 5 }, (_, i) => currentYear - i);
 interface Member { id: string; name: string; memberId: string; rank: string; }
 interface Product { id: string; name: string; mrp: number; piDirect: number; piUpline: number; }
 interface SaleItem { productId: string; quantity: number; }
+interface SaleItemFull { productId: string; quantity: number; mrpAtSale: number; product: { id: string; name: string; mrp: number } | null; }
 interface Sale {
   id: string; amount: number; month: number; year: number; invoiceUrl: string | null;
   notes: string | null; createdAt: string;
   member: { name: string; memberId: string; rank: string };
   enteredBy: { name: string };
+  saleItems?: SaleItemFull[];
 }
 
 export default function AdminSalesPage() {
@@ -165,6 +167,34 @@ export default function AdminSalesPage() {
     const invoiceNo = `HV-${s.id.slice(-6).toUpperCase()}`;
     const printDate = new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" });
     const saleMonth = months[s.month - 1];
+    const hasItems = s.saleItems && s.saleItems.length > 0;
+
+    const itemsHtml = hasItems
+      ? `<div class="section">
+          <div class="section-title">Products Purchased</div>
+          <table class="items-table">
+            <thead>
+              <tr>
+                <th class="text-left">Product</th>
+                <th class="text-center">Qty</th>
+                <th class="text-right">MRP</th>
+                <th class="text-right">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${s.saleItems!.map((item) => `
+                <tr>
+                  <td>${item.product?.name ?? "Product"}</td>
+                  <td class="text-center">${item.quantity}</td>
+                  <td class="text-right">₹${item.mrpAtSale.toLocaleString("en-IN")}</td>
+                  <td class="text-right">₹${(item.quantity * item.mrpAtSale).toLocaleString("en-IN")}</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        </div>`
+      : "";
+
     const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/>
 <title>Invoice ${invoiceNo}</title>
 <style>
@@ -177,12 +207,19 @@ export default function AdminSalesPage() {
   .inv-meta h2 { font-size: 18px; font-weight: 700; color: #1a1a1a; }
   .inv-meta p { font-size: 11px; color: #666; margin-top: 3px; }
   .section { margin-bottom: 20px; }
-  .section-title { font-size: 10px; font-weight: 700; color: #666; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+  .section-title { font-size: 10px; font-weight: 700; color: #666; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; }
   .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
   .info-row { display: flex; gap: 6px; margin-bottom: 4px; }
   .info-label { font-size: 11px; color: #666; min-width: 90px; }
   .info-value { font-size: 12px; font-weight: 600; color: #1a1a1a; }
-  .amount-box { background: #f0fdf4; border: 1.5px solid #16a34a; border-radius: 8px; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; margin: 24px 0; }
+  .items-table { width: 100%; border-collapse: collapse; }
+  .items-table th { font-size: 10px; color: #666; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; padding: 6px 8px; border-bottom: 1.5px solid #e5e7eb; }
+  .items-table td { font-size: 12px; padding: 7px 8px; border-bottom: 1px solid #f3f4f6; color: #1a1a1a; }
+  .items-table tbody tr:last-child td { border-bottom: none; }
+  .text-left { text-align: left; }
+  .text-center { text-align: center; }
+  .text-right { text-align: right; }
+  .amount-box { background: #f0fdf4; border: 1.5px solid #16a34a; border-radius: 8px; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; margin: 20px 0; }
   .amount-label { font-size: 13px; color: #166534; font-weight: 600; }
   .amount-value { font-size: 24px; font-weight: 800; color: #15803d; }
   .footer { border-top: 1px solid #e5e7eb; margin-top: 32px; padding-top: 14px; display: flex; justify-content: space-between; align-items: center; }
@@ -214,6 +251,7 @@ export default function AdminSalesPage() {
     ${s.notes ? `<div class="info-row"><span class="info-label">Notes</span><span class="info-value">${s.notes}</span></div>` : ""}
   </div>
 </div>
+${itemsHtml}
 <div class="amount-box">
   <span class="amount-label">Total Sale Amount</span>
   <span class="amount-value">₹${s.amount.toLocaleString("en-IN")}</span>

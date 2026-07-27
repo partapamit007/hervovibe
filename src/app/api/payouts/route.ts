@@ -7,7 +7,7 @@ export async function POST(req: NextRequest) {
   if (!session || session.user.role !== "MASTER_ADMIN")
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { memberId, month, year, salaryAmount, piAmount, biAmount, paymentMode, transactionRef, notes } = await req.json();
+  const { memberId, month, year, salaryAmount, commissionAmount, piAmount, biAmount, paymentMode, transactionRef, notes } = await req.json();
   if (!memberId || !month || !year)
     return NextResponse.json({ error: "memberId, month, year required" }, { status: 400 });
 
@@ -16,9 +16,10 @@ export async function POST(req: NextRequest) {
   if (monthInt < 1 || monthInt > 12 || yearInt < 2020 || yearInt > 2100)
     return NextResponse.json({ error: "Invalid month or year" }, { status: 400 });
 
-  const salary = parseFloat(salaryAmount || 0);
-  const pi     = parseFloat(piAmount     || 0);
-  const bi     = parseFloat(biAmount     || 0);
+  const salary     = parseFloat(salaryAmount     || 0);
+  const commission = parseFloat(commissionAmount || 0);
+  const pi         = parseFloat(piAmount         || 0);
+  const bi         = parseFloat(biAmount         || 0);
 
   try {
     const payout = await prisma.payoutRecord.create({
@@ -26,10 +27,11 @@ export async function POST(req: NextRequest) {
         memberId,
         month: monthInt,
         year:  yearInt,
-        salaryAmount: salary,
-        piAmount:     pi,
-        biAmount:     bi,
-        totalAmount:  salary + pi + bi,
+        salaryAmount:     salary,
+        commissionAmount: commission,
+        piAmount:         pi,
+        biAmount:         bi,
+        totalAmount:      salary + commission + pi + bi,
         paymentMode:  paymentMode  || null,
         transactionRef: transactionRef || null,
         notes:        notes || null,

@@ -27,7 +27,8 @@ interface PreviewMember {
   ownSales: number; qualifiesForSalary: boolean;
   greenTeamSize: number; minTeamRequired: number;
   salaryBlocked: boolean; salary: number;
-  businessCommission: number; piAmount: number;
+  businessCommission: number;
+  piPoints: number; piRatePerPoint: number | null; piAmount: number;
   groupVolume: number; alreadyPaid: boolean;
 }
 
@@ -37,7 +38,7 @@ interface BiPreviewMember {
 
 interface PayoutRecord {
   id: string; month: number; year: number;
-  salaryAmount: number; piAmount: number; biAmount: number; totalAmount: number;
+  salaryAmount: number; commissionAmount: number; piAmount: number; biAmount: number; totalAmount: number;
   paymentMode: string | null; transactionRef: string | null; notes: string | null;
   paidAt: string;
   member: { name: string; memberId: string; rank: string; bankAccount?: string; ifscCode?: string; upiId?: string };
@@ -60,6 +61,7 @@ export default function PayoutsPage() {
   const [payouts,     setPayouts]     = useState<PayoutRecord[]>([]);
   const [payoutsLoading, setPayoutsLoading] = useState(true);
   const [preview,     setPreview]     = useState<PreviewMember[] | null>(null);
+  const [previewPiRate, setPreviewPiRate] = useState<number | null>(null);
   const [generating,  setGenerating]  = useState(false);
   const [saving,      setSaving]      = useState(false);
   const [saveMsg,     setSaveMsg]     = useState("");
@@ -107,7 +109,10 @@ export default function PayoutsPage() {
     setGenerating(true); setSaveMsg("");
     const res = await fetch(`/api/payouts/preview?month=${filterMonth}&year=${filterYear}`);
     const data = await res.json();
-    if (res.ok) setPreview(data.members ?? []);
+    if (res.ok) {
+      setPreview(data.members ?? []);
+      setPreviewPiRate(data.piRatePerPoint ?? null);
+    }
     setGenerating(false);
   }
 
@@ -117,15 +122,18 @@ export default function PayoutsPage() {
     let saved = 0, skipped = 0;
     for (const m of preview) {
       if (m.alreadyPaid) { skipped++; continue; }
-      const total = m.salary + m.piAmount + m.businessCommission;
+      const rateNote = m.piRatePerPoint !== null
+        ? ` (${m.piPoints.toFixed(2)} PT × ₹${m.piRatePerPoint}/pt)`
+        : " (no rate set)";
       await fetch("/api/payouts", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           memberId: m.memberId, month: filterMonth, year: filterYear,
-          salaryAmount: m.salary,
-          piAmount: m.piAmount + m.businessCommission,
-          biAmount: 0,
-          notes: `Auto: Salary ₹${m.salary} + Commission ₹${m.businessCommission.toFixed(2)} + PI ₹${m.piAmount.toFixed(2)}`,
+          salaryAmount:     m.salary,
+          commissionAmount: m.businessCommission,
+          piAmount:         m.piAmount,
+          biAmount:         0,
+          notes: `Auto: Salary ₹${m.salary} + Commission ₹${m.businessCommission.toFixed(2)} + PI ₹${m.piAmount.toFixed(2)}${rateNote}`,
         }),
       });
       saved++;
@@ -181,10 +189,10 @@ export default function PayoutsPage() {
   }
 
   function exportCSV() {
-    const headers = ["Member ID","Name","Month","Year","Salary","PI+Commission","Total","Mode","Ref","Notes","Paid At"];
+    const headers = ["Member ID","Name","Month","Year","Salary","Commission","PI (₹)","Total","Mode","Ref","Notes","Paid At"];
     const rows = payouts.map((p) => [
       p.member.memberId, p.member.name, months[p.month - 1], p.year,
-      p.salaryAmount, p.piAmount, p.totalAmount,
+      p.salaryAmount, p.commissionAmount, p.piAmount, p.totalAmount,
       p.paymentMode ?? "", p.transactionRef ?? "", p.notes ?? "",
       new Date(p.paidAt).toLocaleDateString("en-IN"),
     ]);
@@ -196,6 +204,7 @@ export default function PayoutsPage() {
 
   const totalPaid = payouts.reduce((s, p) => s + p.totalAmount, 0);
   const previewTotal = preview?.reduce((s, m) => m.alreadyPaid ? s : s + m.salary + m.piAmount + m.businessCommission, 0) ?? 0;
+  const piRateSet = previewPiRate !== null;
   const biPreviewTotal = biPreview?.reduce((s, m) => s + m.total, 0) ?? 0;
 
   const tabClass = (t: string) =>
@@ -279,6 +288,21 @@ export default function PayoutsPage() {
                 </div>
               </CardHeader>
               <CardContent>
+                {!piRateSet && (
+                  <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 mb-4 text-sm">
+                    <span className="text-amber-500 shrink-0 mt-0.5">⚠️</span>
+                    <div className="text-amber-800">
+                      <p className="font-semibold">PI Rate not set for {monthsFull[parseInt(filterMonth) - 1]} {filterYear}</p>
+                      <p className="text-xs mt-0.5">Go to <strong>Incentives → PI Rate (₹/pt)</strong> and set the monthly rate before releasing. PI amounts will show ₹0 until the rate is set.</p>
+                    </div>
+                  </div>
+                )}
+                {piRateSet && (
+                  <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-4 py-3 mb-4 text-sm text-green-800">
+                    <span>✓</span>
+                    <span>PI Rate for this month: <strong>₹{previewPiRate}/pt</strong> — PI column shows PT × rate</span>
+                  </div>
+                )}
                 {preview.length === 0 ? (
                   <p className="text-sm text-gray-400 text-center py-6">No eligible members for this month.</p>
                 ) : (
@@ -290,7 +314,8 @@ export default function PayoutsPage() {
                           <th className="text-right pb-2 font-medium px-2">Own Sales</th>
                           <th className="text-right pb-2 font-medium px-2">Salary</th>
                           <th className="text-right pb-2 font-medium px-2">Commission</th>
-                          <th className="text-right pb-2 font-medium px-2">PI</th>
+                          <th className="text-right pb-2 font-medium px-2">PI Points</th>
+                          <th className="text-right pb-2 font-medium px-2">PI (₹)</th>
                           <th className="text-right pb-2 font-medium pl-2">Total</th>
                         </tr>
                       </thead>
@@ -322,8 +347,11 @@ export default function PayoutsPage() {
                               <td className="py-2.5 px-2 text-right text-xs text-blue-700 font-medium">
                                 ₹{m.businessCommission.toFixed(2)}
                               </td>
+                              <td className="py-2.5 px-2 text-right text-xs text-gray-600 font-medium">
+                                {m.piPoints.toFixed(2)} PT
+                              </td>
                               <td className="py-2.5 px-2 text-right text-xs text-green-700 font-medium">
-                                ₹{m.piAmount.toFixed(2)}
+                                {piRateSet ? `₹${m.piAmount.toFixed(2)}` : <span className="text-amber-500">Rate not set</span>}
                               </td>
                               <td className="py-2.5 pl-2 text-right text-xs font-bold text-green-700">
                                 ₹{total.toLocaleString("en-IN", { maximumFractionDigits: 0 })}
@@ -369,8 +397,11 @@ export default function PayoutsPage() {
                             {p.salaryAmount > 0 && (
                               <span className="text-xs text-gray-500">Salary: <span className="font-medium text-gray-700">₹{p.salaryAmount.toLocaleString("en-IN")}</span></span>
                             )}
+                            {p.commissionAmount > 0 && (
+                              <span className="text-xs text-gray-500">Commission: <span className="font-medium text-blue-700">₹{p.commissionAmount.toLocaleString("en-IN")}</span></span>
+                            )}
                             {p.piAmount > 0 && (
-                              <span className="text-xs text-gray-500">PI+Commission: <span className="font-medium text-gray-700">₹{p.piAmount.toLocaleString("en-IN")}</span></span>
+                              <span className="text-xs text-gray-500">PI: <span className="font-medium text-green-700">₹{p.piAmount.toLocaleString("en-IN")}</span></span>
                             )}
                           </div>
                           {p.notes && <p className="text-xs text-gray-400 mt-0.5">{p.notes}</p>}

@@ -82,7 +82,31 @@ export default function MemberDetailPage() {
       <div className="text-center py-12 text-gray-400">Member not found</div>
     );
 
-  const totalSales = member.salesEntries?.reduce((s: number, e: any) => s + e.amount, 0) || 0;
+  const salesEntries: any[] = member.salesEntries ?? [];
+  const totalSales = salesEntries.reduce((s: number, e: any) => s + e.amount, 0);
+  const totalSalesCount = salesEntries.length;
+
+  // Per-sale: compute business commission + PI earned by this member (depth=0 records)
+  function getSaleEarnings(sale: any) {
+    const records: any[] = sale.commissionRecords ?? [];
+    const business = records.filter((r: any) => r.type === "BUSINESS").reduce((s: number, r: any) => s + r.amount, 0);
+    const pi = records.filter((r: any) => r.type === "PI").reduce((s: number, r: any) => s + r.amount, 0);
+    return { business, pi };
+  }
+
+  // Monthly sales summary
+  const monthlySalesMap: Record<string, number> = {};
+  for (const e of salesEntries) {
+    const key = `${e.year}-${String(e.month).padStart(2,"0")}`;
+    monthlySalesMap[key] = (monthlySalesMap[key] ?? 0) + e.amount;
+  }
+  const monthlySales = Object.entries(monthlySalesMap)
+    .sort((a, b) => b[0].localeCompare(a[0]))
+    .slice(0, 6)
+    .map(([key, amt]) => {
+      const [y, m] = key.split("-");
+      return { label: `${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][parseInt(m)-1]} ${y}`, amount: amt };
+    });
 
   return (
     <div className="max-w-2xl">
@@ -230,10 +254,23 @@ export default function MemberDetailPage() {
         </Card>
         <Card className="col-span-2">
           <CardContent className="p-4">
-            <p className="text-xs text-gray-500">Total Sales (All Time)</p>
-            <p className="text-sm font-bold text-green-600">
-              ₹{totalSales.toLocaleString("en-IN")}
-            </p>
+            <p className="text-xs text-gray-500 mb-2">Total Sales (All Time)</p>
+            <div className="flex items-end justify-between mb-3">
+              <p className="text-xl font-bold text-green-600">
+                ₹{totalSales.toLocaleString("en-IN")}
+              </p>
+              <p className="text-xs text-gray-400">{totalSalesCount} sale{totalSalesCount !== 1 ? "s" : ""}</p>
+            </div>
+            {monthlySales.length > 0 && (
+              <div className="border-t border-gray-100 pt-2 space-y-1">
+                {monthlySales.map((m) => (
+                  <div key={m.label} className="flex justify-between text-xs">
+                    <span className="text-gray-500">{m.label}</span>
+                    <span className="font-medium text-gray-700">₹{m.amount.toLocaleString("en-IN")}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -330,25 +367,43 @@ export default function MemberDetailPage() {
           <CardTitle className="text-sm">Recent Sales</CardTitle>
         </CardHeader>
         <CardContent>
-          {member.salesEntries?.length === 0 ? (
-            <p className="text-gray-400 text-sm text-center py-4">
-              No sales yet
-            </p>
+          {salesEntries.length === 0 ? (
+            <p className="text-gray-400 text-sm text-center py-4">No sales yet</p>
           ) : (
-            <div className="space-y-2">
-              {member.salesEntries?.map((s: any) => (
-                <div
-                  key={s.id}
-                  className="flex justify-between py-2 border-b border-gray-100 last:border-0"
-                >
-                  <span className="text-sm text-gray-600">
-                    {s.month}/{s.year}
-                  </span>
-                  <span className="text-sm font-medium text-green-600">
-                    ₹{s.amount.toLocaleString("en-IN")}
-                  </span>
-                </div>
-              ))}
+            <div className="space-y-4">
+              {salesEntries.slice(0, 10).map((s: any) => {
+                const { business, pi } = getSaleEarnings(s);
+                const hasItems = s.saleItems && s.saleItems.length > 0;
+                const mName = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][s.month - 1];
+                return (
+                  <div key={s.id} className="border border-gray-100 rounded-lg p-3">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-xs font-semibold text-gray-500">{mName} {s.year}</span>
+                      <span className="text-sm font-bold text-green-600">₹{s.amount.toLocaleString("en-IN")}</span>
+                    </div>
+                    {hasItems && (
+                      <div className="space-y-1 mb-2">
+                        {s.saleItems.map((item: any, idx: number) => (
+                          <div key={idx} className="flex justify-between text-xs text-gray-600">
+                            <span>{item.product?.name ?? "Product"} × {item.quantity}</span>
+                            <span>₹{(item.quantity * item.mrpAtSale).toLocaleString("en-IN")}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {(business > 0 || pi > 0) && (
+                      <div className="flex gap-3 pt-2 border-t border-gray-100">
+                        {business > 0 && (
+                          <span className="text-xs text-blue-600">Commission: ₹{business.toFixed(2)}</span>
+                        )}
+                        {pi > 0 && (
+                          <span className="text-xs text-green-600">PI: {pi.toFixed(2)} PT</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </CardContent>

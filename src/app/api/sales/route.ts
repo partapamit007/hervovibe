@@ -52,20 +52,32 @@ export async function POST(req: NextRequest) {
   if (monthInt < 1 || monthInt > 12 || yearInt < 2020 || yearInt > 2100)
     return NextResponse.json({ error: "Invalid month or year" }, { status: 400 });
 
-  const sale = await prisma.sale.create({
-    data: {
-      memberId,
-      enteredById: session.user.id,
-      amount: finalAmount,
-      month: monthInt,
-      year: yearInt,
-      invoiceUrl: invoiceUrl || null,
-      notes: notes || null,
-      ...(saleItems.length > 0 && {
-        saleItems: { create: saleItems },
-      }),
-    },
-    include: { member: { select: { name: true, memberId: true, rank: true } } },
+  const sale = await prisma.$transaction(async (tx) => {
+    const created = await tx.sale.create({
+      data: {
+        memberId,
+        enteredById: session.user.id,
+        amount: finalAmount,
+        month: monthInt,
+        year: yearInt,
+        invoiceUrl: invoiceUrl || null,
+        notes: notes || null,
+        ...(saleItems.length > 0 && {
+          saleItems: { create: saleItems },
+        }),
+      },
+      include: { member: { select: { name: true, memberId: true, rank: true } } },
+    });
+
+    // Decrement stock for each product in the sale
+    for (const item of saleItems) {
+      await tx.product.update({
+        where: { id: item.productId },
+        data: { stock: { decrement: item.quantity } },
+      });
+    }
+
+    return created;
   });
 
   // Async commission calculation (don't block the response)
@@ -106,6 +118,7 @@ export async function GET(req: NextRequest) {
     include: {
       member: { select: { name: true, memberId: true, rank: true } },
       enteredBy: { select: { name: true } },
+      saleItems: { include: { product: { select: { id: true, name: true, mrp: true } } } },
     },
     orderBy: { createdAt: "desc" },
     take: 1000,
@@ -121,7 +134,20 @@ export async function DELETE(req: NextRequest) {
   const { id } = await req.json();
   if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
 
-  // Soft-delete the sale only — commission records are kept as permanent audit trail
-  await prisma.sale.update({ where: { id }, data: { deletedAt: new Date() } });
+  await prisma.$transaction(async (tx) => {
+    // Restore stock for each item before soft-deleting
+    const items = await tx.saleItem.findMany({
+      where: { saleId: id },
+      select: { productId: true, quantity: true },
+    });
+    for (const item of items) {
+      await tx.product.update({
+        where: { id: item.productId },
+        data: { stock: { increment: item.quantity } },
+      });
+    }
+    await tx.sale.update({ where: { id }, data: { deletedAt: new Date() } });
+  });
+
   return NextResponse.json({ ok: true });
 }

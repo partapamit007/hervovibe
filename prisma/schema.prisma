@@ -89,24 +89,27 @@ model Sale {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   deletedAt   DateTime?
-  saleItems   SaleItem[]
+  saleItems          SaleItem[]
+  commissionRecords  CommissionRecord[]
 
   @@map("sales")
 }
 
 model Product {
-  id        String     @id @default(cuid())
-  name      String
-  mrp       Float
-  piRate    Float      @default(10)  // PI % of MRP — seller earns
-  piUpline  Float      @default(0)   // PI % of MRP — each upline earns independently
-  biRate    Float      @default(1)   // BI % of MRP — seller earns
-  biUpline  Float      @default(0)   // BI % of MRP — each upline earns independently
-  piDirect  Float      @default(0)   // unused
-  isActive  Boolean    @default(true)
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  saleItems SaleItem[]
+  id               String     @id @default(cuid())
+  name             String
+  mrp              Float
+  piRate           Float      @default(10)
+  piUpline         Float      @default(0)
+  biRate           Float      @default(1)
+  biUpline         Float      @default(0)
+  piDirect         Float      @default(0)
+  stock            Int        @default(0)
+  lowStockAlert    Int        @default(10)
+  isActive         Boolean    @default(true)
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  saleItems        SaleItem[]
 
   @@map("products")
 }
@@ -134,6 +137,7 @@ model CommissionRecord {
   memberId     String
   member       User           @relation("EarnedCommissions", fields: [memberId], references: [id])
   saleId       String
+  sale         Sale           @relation(fields: [saleId], references: [id], onDelete: Cascade)
   fromMemberId String
   month        Int
   year         Int
@@ -162,10 +166,11 @@ model PayoutRecord {
   member      User     @relation(fields: [memberId], references: [id])
   month       Int
   year        Int
-  salaryAmount    Float    @default(0)
-  piAmount        Float    @default(0)
-  biAmount        Float    @default(0)
-  totalAmount     Float    @default(0)
+  salaryAmount      Float    @default(0)
+  commissionAmount  Float    @default(0)
+  piAmount          Float    @default(0)
+  biAmount          Float    @default(0)
+  totalAmount       Float    @default(0)
   paymentMode     String?
   transactionRef  String?
   notes           String?
