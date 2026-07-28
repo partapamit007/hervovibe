@@ -149,11 +149,11 @@ export default function ProductsPage() {
           <div className="grid grid-cols-2 gap-x-6">
             <div>
               <p className="font-medium text-green-700">PI — Product Incentive (Monthly)</p>
-              <p className="text-blue-700"><strong>PI Seller</strong>: fixed ₹ the seller earns per unit. <strong>PI Upline</strong>: L1 upline gets this full amount per unit; L2 gets 50%, L3 gets 25%, and so on (halving). Paid monthly.</p>
+              <p className="text-blue-700"><strong>PI Seller</strong>: fixed ₹ the seller earns per unit. <strong>PI Upline</strong>: every upline member (L1, L2, L3…) earns this same fixed ₹ amount per unit sold. Paid monthly.</p>
             </div>
             <div>
               <p className="font-medium text-purple-700">BI — Business Incentive (Admin-scheduled)</p>
-              <p className="text-blue-700"><strong>BI Seller</strong>: fixed ₹ the seller earns per unit. <strong>BI Upline</strong>: same halving rule — L1 gets full amount, L2 gets 50%, L3 gets 25%… Released by admin.</p>
+              <p className="text-blue-700"><strong>BI Seller</strong>: fixed ₹ the seller earns per unit. <strong>BI Upline</strong>: every upline member earns this same fixed ₹ amount per unit — no halving. Released by admin.</p>
             </div>
           </div>
         </div>
@@ -239,7 +239,7 @@ export default function ProductsPage() {
                     <span className="absolute right-2.5 top-1.5 text-xs text-gray-400">₹</span>
                   </div>
                   {piUplineVal > 0 && (
-                    <p className="text-xs text-gray-400 mt-1">L1: ₹{piUplineVal.toFixed(2)} · L2: ₹{(piUplineVal * 0.5).toFixed(2)} · L3: ₹{(piUplineVal * 0.25).toFixed(2)}</p>
+                    <p className="text-xs text-gray-400 mt-1">Every upline level earns ₹{piUplineVal.toFixed(2)} per unit</p>
                   )}
                 </div>
               </div>
@@ -265,7 +265,7 @@ export default function ProductsPage() {
                     <span className="absolute right-2.5 top-1.5 text-xs text-gray-400">₹</span>
                   </div>
                   {biUplineVal > 0 && (
-                    <p className="text-xs text-gray-400 mt-1">L1: ₹{biUplineVal.toFixed(2)} · L2: ₹{(biUplineVal * 0.5).toFixed(2)} · L3: ₹{(biUplineVal * 0.25).toFixed(2)}</p>
+                    <p className="text-xs text-gray-400 mt-1">Every upline level earns ₹{biUplineVal.toFixed(2)} per unit</p>
                   )}
                 </div>
               </div>

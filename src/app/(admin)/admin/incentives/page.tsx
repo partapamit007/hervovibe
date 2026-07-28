@@ -300,7 +300,7 @@ export default function IncentivesPage() {
             <div className="text-green-800">
               <p className="font-semibold mb-0.5">PI is auto-calculated on every sale</p>
               <p className="text-xs leading-relaxed text-green-700">
-                PI = <strong>piRate% of MRP</strong> per product (default 10%). The <strong>seller keeps the full PI amount</strong>. Upline members receive a <strong>halving distribution</strong>: L1 upline gets 50% of seller's PI, L2 gets 25%, L3 gets 12.5%, and so on. No manual entry needed.
+                PI = fixed <strong>₹/unit</strong> per product (set in Products). The <strong>seller keeps the full PI Seller amount</strong>. Every upline member (L1, L2, L3…) earns the same fixed <strong>PI Upline amount</strong> per unit sold. No halving.
               </p>
             </div>
           </div>
@@ -423,7 +423,7 @@ export default function IncentivesPage() {
                 <div className="text-purple-800 text-xs leading-relaxed">
                   <p className="font-semibold mb-0.5">Auto-calculated on every sale — no manual entry needed</p>
                   <p>
-                    BI% of MRP per sale. Total BI amount split <strong>equally among all upline members</strong> — same rule as PI. Base rate: <strong>{baseRate}%</strong> of MRP.
+                    Fixed ₹/unit per product (set in Products). Every upline member earns the same fixed <strong>BI Upline amount</strong> per unit sold — no halving, no %. Base global rate: <strong>{baseRate}%</strong> (fallback for sales without product items).
                   </p>
                 </div>
               </div>

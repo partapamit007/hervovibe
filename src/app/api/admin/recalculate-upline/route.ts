@@ -68,12 +68,11 @@ export async function POST() {
       curSponsorId = upline.sponsorId;
     }
 
-    // L1 gets full piUpline amount, L2 gets 50%, L3 gets 25%, etc.
+    // Every upline member gets the same fixed amount (no halving)
     for (const [idx, u] of uplineChain.entries()) {
       const depth = idx + 1;
-      const halvingFactor = Math.pow(0.5, depth - 1);
-      const uplinePIAmt = parseFloat((totalUplinePI * halvingFactor).toFixed(2));
-      const uplineBIAmt = parseFloat((totalUplineBI * halvingFactor).toFixed(2));
+      const uplinePIAmt = parseFloat(totalUplinePI.toFixed(2));
+      const uplineBIAmt = parseFloat(totalUplineBI.toFixed(2));
       if (uplinePIAmt >= 0.01) newRecords.push({ ...base, memberId: u.id, type: "PI", amount: uplinePIAmt, depth });
       if (uplineBIAmt >= 0.01) newRecords.push({ ...base, memberId: u.id, type: "BI", amount: uplineBIAmt, depth });
     }

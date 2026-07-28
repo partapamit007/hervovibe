@@ -103,15 +103,12 @@ export async function calculateCommissions(saleId: string) {
     curSponsorId = upline.sponsorId;
   }
 
-  // 4. PI and BI for upline — L1 gets full piUpline/biUpline base, halves at each deeper level
-  //    L1: totalUplinePI × 1, L2: × 0.5, L3: × 0.25 ...
-  //    Formula: uplineAmount = totalUplineBase × (0.5 ^ (depth - 1))
+  // 4. PI and BI for upline — every upline member gets the same fixed amount (no halving)
   if (uplineChain.length > 0) {
     for (const [idx, u] of uplineChain.entries()) {
       const depth = idx + 1;
-      const halvingFactor = Math.pow(0.5, depth - 1);
-      const uplinePIAmt = parseFloat((totalUplinePI * halvingFactor).toFixed(2));
-      const uplineBIAmt = parseFloat((totalUplineBI * halvingFactor).toFixed(2));
+      const uplinePIAmt = parseFloat(totalUplinePI.toFixed(2));
+      const uplineBIAmt = parseFloat(totalUplineBI.toFixed(2));
       if (uplinePIAmt >= 0.01)
         records.push({ ...base, memberId: u.id, type: "PI", amount: uplinePIAmt, depth });
       if (uplineBIAmt >= 0.01)
