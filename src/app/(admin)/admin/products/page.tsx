@@ -3,19 +3,51 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, XCircle, Pencil, Trash2, Package, Info, AlertTriangle, Plus, Minus } from "lucide-react";
+import { CheckCircle, XCircle, Pencil, Trash2, Package, Info, AlertTriangle, Plus, Minus, ChevronDown, ChevronUp } from "lucide-react";
 
 interface Product {
-  id: string;
-  name: string;
-  mrp: number;
-  piRate: number;
-  piUpline: number;
-  biRate: number;
-  biUpline: number;
-  stock: number;
-  lowStockAlert: number;
-  isActive: boolean;
+  id: string; name: string; mrp: number;
+  piRate: number; piUpline: number; biRate: number; biUpline: number;
+  stock: number; lowStockAlert: number; isActive: boolean;
+}
+
+function StockAlertSummary({ outOfStock, lowStock }: { outOfStock: Product[]; lowStock: Product[] }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="mb-5 rounded-lg border overflow-hidden">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between px-4 py-3 bg-amber-50 border-b border-amber-200 text-sm text-amber-800 hover:bg-amber-100 transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
+          <span>
+            {outOfStock.length > 0 && <span className="font-semibold text-red-600">{outOfStock.length} out of stock</span>}
+            {outOfStock.length > 0 && lowStock.length > 0 && <span className="mx-2 text-gray-400">·</span>}
+            {lowStock.length > 0 && <span className="font-semibold text-amber-700">{lowStock.length} low stock</span>}
+            <span className="ml-2 text-amber-600 font-normal">— click to {open ? "hide" : "view"}</span>
+          </span>
+        </div>
+        {open ? <ChevronUp className="w-4 h-4 text-amber-500" /> : <ChevronDown className="w-4 h-4 text-amber-500" />}
+      </button>
+      {open && (
+        <div className="max-h-48 overflow-y-auto bg-white divide-y divide-gray-100">
+          {outOfStock.map(p => (
+            <div key={p.id} className="flex items-center gap-2 px-4 py-2 text-xs text-red-700">
+              <span className="w-2 h-2 rounded-full bg-red-500 shrink-0" />
+              <span><strong>{p.name}</strong> — out of stock</span>
+            </div>
+          ))}
+          {lowStock.map(p => (
+            <div key={p.id} className="flex items-center gap-2 px-4 py-2 text-xs text-amber-700">
+              <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" />
+              <span><strong>{p.name}</strong> — {p.stock} units left</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 const emptyForm = { name: "", mrp: "", piRate: "0", piUpline: "0", biRate: "0", biUpline: "0", stock: "0", lowStockAlert: "10" };
@@ -123,22 +155,9 @@ export default function ProductsPage() {
         <p className="text-gray-500 text-sm">Manage products, incentive rates, and stock levels</p>
       </div>
 
-      {/* Stock alerts */}
+      {/* Stock alerts — compact summary */}
       {(outOfStock.length > 0 || lowStock.length > 0) && (
-        <div className="space-y-2 mb-6">
-          {outOfStock.map(p => (
-            <div key={p.id} className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-4 py-2.5 text-sm text-red-700">
-              <AlertTriangle className="w-4 h-4 shrink-0" />
-              <span><strong>{p.name}</strong> is out of stock</span>
-            </div>
-          ))}
-          {lowStock.map(p => (
-            <div key={p.id} className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5 text-sm text-amber-700">
-              <AlertTriangle className="w-4 h-4 shrink-0" />
-              <span><strong>{p.name}</strong> — only {p.stock} units left (alert threshold: {p.lowStockAlert})</span>
-            </div>
-          ))}
-        </div>
+        <StockAlertSummary outOfStock={outOfStock} lowStock={lowStock} />
       )}
 
       {/* Info banner */}
