@@ -104,11 +104,9 @@ export default function ProductsPage() {
     load();
   }
 
-  const mrpVal      = parseFloat(form.mrp)      || 0;
-  const piVal       = parseFloat(form.piRate)   || 0;
-  const piUplineVal = parseFloat(form.piUpline) || 0;
-  const biVal       = parseFloat(form.biRate)   || 0;
-  const biUplineVal = parseFloat(form.biUpline) || 0;
+  const mrpVal = parseFloat(form.mrp)    || 0;
+  const piVal  = parseFloat(form.piRate) || 0;
+  const biVal  = parseFloat(form.biRate) || 0;
 
   const outOfStock  = products.filter(p => p.stock <= 0);
   const lowStock    = products.filter(p => p.stock > 0 && p.stock <= p.lowStockAlert);
@@ -142,15 +140,15 @@ export default function ProductsPage() {
       <div className="flex gap-3 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 mb-6 text-sm">
         <Info className="w-4 h-4 shrink-0 mt-0.5 text-blue-500" />
         <div className="text-blue-800 text-xs leading-relaxed">
-          <p className="font-semibold mb-1">How incentives work</p>
+          <p className="font-semibold mb-1">How incentives work (Halving Formula)</p>
           <div className="grid grid-cols-2 gap-x-6">
             <div>
               <p className="font-medium text-green-700">PI — Product Incentive (Monthly)</p>
-              <p className="text-blue-700">Seller PI%: seller earns this per unit. Upline PI%: every upline member earns this same fixed % per unit — independently, not split. Paid monthly.</p>
+              <p className="text-blue-700">Seller earns PI% of MRP per unit. Upline receives a halving split: L1 gets 50% of seller's PI, L2 gets 25%, L3 gets 12.5%, and so on. Paid monthly.</p>
             </div>
             <div>
               <p className="font-medium text-purple-700">BI — Business Incentive (Admin-scheduled)</p>
-              <p className="text-blue-700">BI% of MRP per unit — every upline member earns this same fixed % independently. Released by admin quarterly / half-yearly / yearly.</p>
+              <p className="text-blue-700">Seller earns BI% of MRP per unit. Same halving rule for upline: L1 gets 50%, L2 gets 25%, L3 gets 12.5%… Released by admin quarterly / half-yearly / yearly.</p>
             </div>
           </div>
         </div>
@@ -224,21 +222,13 @@ export default function ProductsPage() {
                     />
                     <span className="absolute right-2.5 top-1.5 text-xs text-gray-400">%</span>
                   </div>
-                  {mrpVal > 0 && piVal > 0 && <p className="text-xs text-green-600 mt-1">₹{(mrpVal * piVal / 100).toFixed(2)} / unit (seller)</p>}
+                  {mrpVal > 0 && piVal > 0 && (
+                    <div className="text-xs text-green-600 mt-1 space-y-0.5">
+                      <p>Seller: ₹{(mrpVal * piVal / 100).toFixed(2)} / unit</p>
+                      <p className="text-gray-400">L1 upline: ₹{(mrpVal * piVal / 100 * 0.5).toFixed(2)} · L2: ₹{(mrpVal * piVal / 100 * 0.25).toFixed(2)} · L3: ₹{(mrpVal * piVal / 100 * 0.125).toFixed(2)}</p>
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <label className="block text-xs font-medium text-green-700 mb-1">Upline PI %</label>
-                  <div className="relative">
-                    <input type="number" min="0" max="100" step="0.01" value={form.piUpline}
-                      onChange={e => setForm({ ...form, piUpline: e.target.value })} placeholder="5"
-                      className="w-full px-2.5 py-1.5 pr-7 border border-green-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                    />
-                    <span className="absolute right-2.5 top-1.5 text-xs text-gray-400">%</span>
-                  </div>
-                  {mrpVal > 0 && piUplineVal > 0 && <p className="text-xs text-green-600 mt-1">₹{(mrpVal * piUplineVal / 100).toFixed(2)} / unit (each upline)</p>}
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-purple-700 mb-1">Seller BI %</label>
                   <div className="relative">
@@ -248,18 +238,12 @@ export default function ProductsPage() {
                     />
                     <span className="absolute right-2.5 top-1.5 text-xs text-gray-400">%</span>
                   </div>
-                  {mrpVal > 0 && biVal > 0 && <p className="text-xs text-purple-600 mt-1">₹{(mrpVal * biVal / 100).toFixed(2)} / unit (seller)</p>}
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-purple-700 mb-1">Upline BI %</label>
-                  <div className="relative">
-                    <input type="number" min="0" max="100" step="0.01" value={form.biUpline}
-                      onChange={e => setForm({ ...form, biUpline: e.target.value })} placeholder="0.5"
-                      className="w-full px-2.5 py-1.5 pr-7 border border-purple-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    />
-                    <span className="absolute right-2.5 top-1.5 text-xs text-gray-400">%</span>
-                  </div>
-                  {mrpVal > 0 && biUplineVal > 0 && <p className="text-xs text-purple-600 mt-1">₹{(mrpVal * biUplineVal / 100).toFixed(2)} / unit (each upline)</p>}
+                  {mrpVal > 0 && biVal > 0 && (
+                    <div className="text-xs text-purple-600 mt-1 space-y-0.5">
+                      <p>Seller: ₹{(mrpVal * biVal / 100).toFixed(2)} / unit</p>
+                      <p className="text-gray-400">L1 upline: ₹{(mrpVal * biVal / 100 * 0.5).toFixed(2)} · L2: ₹{(mrpVal * biVal / 100 * 0.25).toFixed(2)} · L3: ₹{(mrpVal * biVal / 100 * 0.125).toFixed(2)}</p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -303,8 +287,8 @@ export default function ProductsPage() {
                           )}
                         </div>
                         <div className="flex gap-4 mt-1 text-xs text-gray-500 flex-wrap">
-                          <span className="text-green-700">PI: {p.piRate}% seller · {p.piUpline}% upline</span>
-                          <span className="text-purple-700">BI: {p.biRate}% seller · {p.biUpline}% upline</span>
+                          <span className="text-green-700">PI: {p.piRate}% → ₹{(p.mrp * p.piRate / 100).toFixed(2)}/unit seller · L1: ₹{(p.mrp * p.piRate / 100 * 0.5).toFixed(2)}</span>
+                          <span className="text-purple-700">BI: {p.biRate}% → ₹{(p.mrp * p.biRate / 100).toFixed(2)}/unit seller · L1: ₹{(p.mrp * p.biRate / 100 * 0.5).toFixed(2)}</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-3 shrink-0">
