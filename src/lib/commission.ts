@@ -100,25 +100,19 @@ export async function calculateCommissions(saleId: string) {
     curSponsorId = upline.sponsorId;
   }
 
-  // 4. PI and BI for upline — each member at every level earns the same fixed % of MRP
+  // 4. PI and BI for upline — halving at each level
+  //    Depth 1 gets 50% of seller's amount, depth 2 gets 25%, depth 3 gets 12.5%, etc.
+  //    Formula: uplineAmount = totalSellerAmount × (0.5 ^ depth)
   if (uplineChain.length > 0) {
-    if (noItems) {
-      // No product items: no upline PI/BI (no per-product rates available)
-    } else {
-      // Each upline member earns piUpline% (PI) and biUpline% (BI) per product per unit — flat, same for all levels
-      for (const [idx, u] of uplineChain.entries()) {
-        const depth = idx + 1;
-        let uplinePIAmt = 0;
-        let uplineBIAmt = 0;
-        for (const item of sale.saleItems) {
-          uplinePIAmt += item.quantity * item.mrpAtSale * ((item.product?.piUpline ?? 0) / 100);
-          uplineBIAmt += item.quantity * item.mrpAtSale * ((item.product?.biUpline ?? 0) / 100);
-        }
-        if (uplinePIAmt >= 0.01)
-          records.push({ ...base, memberId: u.id, type: "PI", amount: parseFloat(uplinePIAmt.toFixed(2)), depth });
-        if (uplineBIAmt >= 0.01)
-          records.push({ ...base, memberId: u.id, type: "BI", amount: parseFloat(uplineBIAmt.toFixed(2)), depth });
-      }
+    for (const [idx, u] of uplineChain.entries()) {
+      const depth = idx + 1;
+      const halvingFactor = Math.pow(0.5, depth);
+      const uplinePIAmt = parseFloat((totalSellerPI * halvingFactor).toFixed(2));
+      const uplineBIAmt = parseFloat((totalSellerBI * halvingFactor).toFixed(2));
+      if (uplinePIAmt >= 0.01)
+        records.push({ ...base, memberId: u.id, type: "PI", amount: uplinePIAmt, depth });
+      if (uplineBIAmt >= 0.01)
+        records.push({ ...base, memberId: u.id, type: "BI", amount: uplineBIAmt, depth });
     }
   }
 

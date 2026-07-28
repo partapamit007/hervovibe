@@ -240,7 +240,7 @@ export default function IncentivesPage() {
             <div className="text-green-800">
               <p className="font-semibold mb-0.5">PI is auto-calculated on every sale</p>
               <p className="text-xs leading-relaxed text-green-700">
-                PI = <strong>10% of MRP</strong> for each sale. The <strong>seller keeps the full PI amount</strong>. All upline members share an <strong>equal split</strong> of the same amount. No manual entry needed — records appear here automatically when sales are added.
+                PI = <strong>piRate% of MRP</strong> per product (default 10%). The <strong>seller keeps the full PI amount</strong>. Upline members receive a <strong>halving distribution</strong>: L1 upline gets 50% of seller's PI, L2 gets 25%, L3 gets 12.5%, and so on. No manual entry needed.
               </p>
             </div>
           </div>
