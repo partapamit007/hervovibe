@@ -166,7 +166,7 @@ export default function IncentivesPage() {
   }
 
   async function handleRecalculateUpline() {
-    if (!confirm("This will delete all historical upline PI/BI records and recalculate them using the correct halving formula (50%→25%→12.5%...). Seller records are not affected. Continue?")) return;
+    if (!confirm("This will delete ALL PI/BI records (seller + upline) and fully recalculate them using the correct fixed ₹/unit amounts from each product. Continue?")) return;
     setRecalcLoading(true);
     try {
       const res = await fetch("/api/admin/recalculate-upline", { method: "POST" });
@@ -268,7 +268,7 @@ export default function IncentivesPage() {
           className="text-orange-600 border-orange-300 hover:bg-orange-50 shrink-0 mt-1"
         >
           <RefreshCw className={`w-4 h-4 mr-1.5 ${recalcLoading ? "animate-spin" : ""}`} />
-          {recalcLoading ? "Recalculating..." : "Recalculate Upline PI/BI"}
+          {recalcLoading ? "Recalculating..." : "Recalculate All PI/BI"}
         </Button>
       </div>
 

@@ -7,52 +7,57 @@ export async function POST() {
   if (!session || session.user.role !== "MASTER_ADMIN")
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  // Delete all upline PI and BI records (depth > 0); seller records (depth=0) stay
+  // Delete ALL PI and BI records — full rebuild with corrected fixed ₹/unit formula
   const deleted = await prisma.commissionRecord.deleteMany({
-    where: { type: { in: ["PI", "BI"] }, depth: { gt: 0 } },
+    where: { type: { in: ["PI", "BI"] } },
   });
 
-  // Get all sales that have seller PI or BI records (depth 0)
-  const sellerRecords = await prisma.commissionRecord.findMany({
-    where: { type: { in: ["PI", "BI"] }, depth: 0 },
-    select: { saleId: true, fromMemberId: true, month: true, year: true },
+  // Get all sales that have at least one sale item (needed for product rates)
+  const sales = await prisma.sale.findMany({
+    where: { deletedAt: null },
+    select: {
+      id: true,
+      memberId: true,
+      month: true,
+      year: true,
+      amount: true,
+      member: { select: { sponsorId: true } },
+      saleItems: {
+        include: { product: { select: { piRate: true, piUpline: true, biRate: true, biUpline: true } } },
+      },
+    },
   });
-
-  // Deduplicate by saleId
-  const saleIds = [...new Set(sellerRecords.map(r => r.saleId))];
-  const saleMetaMap: Record<string, { fromMemberId: string; month: number; year: number }> = {};
-  for (const r of sellerRecords) saleMetaMap[r.saleId] = { fromMemberId: r.fromMemberId, month: r.month, year: r.year };
 
   const newRecords: {
     memberId: string; saleId: string; fromMemberId: string;
     month: number; year: number; type: "PI" | "BI"; amount: number; depth: number;
   }[] = [];
 
-  for (const saleId of saleIds) {
-    const meta = saleMetaMap[saleId];
+  for (const sale of sales) {
+    const base = { saleId: sale.id, fromMemberId: sale.memberId, month: sale.month, year: sale.year };
 
-    // Fetch sale items with product piUpline/biUpline (fixed ₹/unit values)
-    const saleItems = await prisma.saleItem.findMany({
-      where: { saleId },
-      include: { product: { select: { piUpline: true, biUpline: true } } },
-    });
-
+    // Seller amounts: qty × fixed ₹/unit
+    let totalSellerPI = 0;
+    let totalSellerBI = 0;
     let totalUplinePI = 0;
     let totalUplineBI = 0;
-    for (const item of saleItems) {
-      totalUplinePI += item.quantity * (item.product?.piUpline ?? 0);
-      totalUplineBI += item.quantity * (item.product?.biUpline ?? 0);
+
+    for (const item of sale.saleItems) {
+      const qty = item.quantity;
+      totalSellerPI += qty * (item.product?.piRate   ?? 0);
+      totalSellerBI += qty * (item.product?.biRate   ?? 0);
+      totalUplinePI += qty * (item.product?.piUpline ?? 0);
+      totalUplineBI += qty * (item.product?.biUpline ?? 0);
     }
 
-    // Get seller's sponsor to start upline chain
-    const seller = await prisma.user.findFirst({
-      where: { id: meta.fromMemberId, deletedAt: null },
-      select: { sponsorId: true },
-    });
-    if (!seller?.sponsorId) continue;
+    if (totalSellerPI >= 0.01)
+      newRecords.push({ ...base, memberId: sale.memberId, type: "PI", amount: parseFloat(totalSellerPI.toFixed(2)), depth: 0 });
+    if (totalSellerBI >= 0.01)
+      newRecords.push({ ...base, memberId: sale.memberId, type: "BI", amount: parseFloat(totalSellerBI.toFixed(2)), depth: 0 });
 
+    // Upline chain
     const uplineChain: { id: string; sponsorId: string | null }[] = [];
-    let curSponsorId: string | null = seller.sponsorId;
+    let curSponsorId: string | null = sale.member.sponsorId;
     while (curSponsorId) {
       const upline: { id: string; sponsorId: string | null } | null = await prisma.user.findFirst({
         where: { id: curSponsorId, deletedAt: null },
@@ -63,9 +68,7 @@ export async function POST() {
       curSponsorId = upline.sponsorId;
     }
 
-    const base = { saleId, fromMemberId: meta.fromMemberId, month: meta.month, year: meta.year };
-
-    // L1 gets full piUpline base, L2 gets 50%, L3 gets 25%, etc.
+    // L1 gets full piUpline amount, L2 gets 50%, L3 gets 25%, etc.
     for (const [idx, u] of uplineChain.entries()) {
       const depth = idx + 1;
       const halvingFactor = Math.pow(0.5, depth - 1);
@@ -86,6 +89,6 @@ export async function POST() {
     ok: true,
     deleted: deleted.count,
     created,
-    salesProcessed: saleIds.length,
+    salesProcessed: sales.length,
   });
 }
