@@ -69,6 +69,7 @@ export default function IncentivesPage() {
   const [statusMsg, setStatusMsg] = useState("");
   const [recalcLoading, setRecalcLoading] = useState(false);
   const [expandedBiMember, setExpandedBiMember] = useState<string | null>(null);
+  const [expandedPiMember, setExpandedPiMember] = useState<string | null>(null);
 
   function showStatus(type: "success" | "error", msg: string) {
     setStatus(type); setStatusMsg(msg);
@@ -353,21 +354,50 @@ export default function IncentivesPage() {
                 <CardTitle className="text-base">PI Commissions — {months[parseInt(piMonth) - 1]} {piYear}</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-xs text-gray-500 mb-3">{piSummary.length} members earned PI</p>
-                <div className="divide-y divide-gray-100">
-                  {piSummary.map((m) => (
-                    <div key={m.memberId} className="py-3 flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-semibold text-gray-900">{m.name}</p>
-                        <p className="text-xs text-gray-500">
-                          [{m.memberId}]
-                          {m.depth0 > 0 && <span className="ml-2 text-green-600">Direct: {m.depth0.toFixed(2)} PT</span>}
-                          {m.total - m.depth0 > 0 && <span className="ml-2 text-blue-600">Upline split: {(m.total - m.depth0).toFixed(2)} PT</span>}
-                        </p>
+                <p className="text-xs text-gray-500 mb-3">{piSummary.length} members earned PI · click a member to see breakdown</p>
+                <div className="divide-y divide-gray-100 max-h-[520px] overflow-y-auto pr-1">
+                  {piSummary.map((m) => {
+                    const isOpen = expandedPiMember === m.memberId;
+                    const records = piRecords.filter(r => r.member.memberId === m.memberId);
+                    return (
+                      <div key={m.memberId}>
+                        <button
+                          onClick={() => setExpandedPiMember(isOpen ? null : m.memberId)}
+                          className="w-full py-3 flex items-center justify-between hover:bg-gray-50 rounded px-1 text-left"
+                        >
+                          <div>
+                            <p className="text-sm font-semibold text-gray-900">{m.name}</p>
+                            <p className="text-xs text-gray-500">[{m.memberId}] · {records.length} record{records.length !== 1 ? "s" : ""}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-bold text-green-700">{m.total.toFixed(2)} PT</span>
+                            {isOpen ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                          </div>
+                        </button>
+                        {isOpen && (
+                          <div className="mb-3 ml-2 border-l-2 border-green-200 pl-3 space-y-1.5">
+                            {records.map((r) => (
+                              <div key={r.id} className="flex items-center justify-between text-xs bg-green-50 rounded px-3 py-2">
+                                <div>
+                                  <span className="font-medium text-gray-800">
+                                    {r.depth === 0 ? "Own sale" : `L${r.depth} downline sale`}
+                                  </span>
+                                  <span className="text-gray-500 ml-2">
+                                    from {r.fromMember?.name ?? r.fromMemberId}
+                                    {r.fromMember && <span className="text-gray-400"> [{r.fromMember.memberId}]</span>}
+                                  </span>
+                                </div>
+                                <span className="font-bold text-green-700">{r.amount.toFixed(2)} PT</span>
+                              </div>
+                            ))}
+                            <div className="flex justify-end text-xs font-bold text-green-800 pt-1 pr-1">
+                              Total: {m.total.toFixed(2)} PT
+                            </div>
+                          </div>
+                        )}
                       </div>
-                      <span className="text-sm font-bold text-green-700">{m.total.toFixed(2)} PT</span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
@@ -485,7 +515,7 @@ export default function IncentivesPage() {
               </CardHeader>
               <CardContent>
                 <p className="text-xs text-gray-500 mb-3">{biSummary.length} members earned BI · click a member to see breakdown</p>
-                <div className="divide-y divide-gray-100">
+                <div className="divide-y divide-gray-100 max-h-[520px] overflow-y-auto pr-1">
                   {biSummary.map((m) => {
                     const isOpen = expandedBiMember === m.memberId;
                     const records = biRecords.filter(r => r.member.memberId === m.memberId);
@@ -652,7 +682,7 @@ export default function IncentivesPage() {
               <p className="text-xs text-gray-500 mb-3">{commSummary.length} members · {commissions.length} records</p>
               <Card>
                 <CardContent className="pt-4">
-                  <div className="divide-y divide-gray-100">
+                  <div className="divide-y divide-gray-100 max-h-[520px] overflow-y-auto pr-1">
                     {commSummary.map((m) => (
                       <div key={m.memberId} className="py-3">
                         <div className="flex items-center justify-between">
