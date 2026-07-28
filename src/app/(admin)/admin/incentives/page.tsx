@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, XCircle, TrendingUp, IndianRupee, Settings, Info, RefreshCw } from "lucide-react";
+import { CheckCircle, XCircle, TrendingUp, IndianRupee, Settings, Info, RefreshCw, Download, Printer } from "lucide-react";
 
 const months = [
   "January","February","March","April","May","June",
@@ -181,6 +181,31 @@ export default function IncentivesPage() {
     setRecalcLoading(false);
   }
 
+  function exportCSV(filename: string, headers: string[], rows: (string | number)[][]) {
+    const lines = [headers.join(","), ...rows.map((r) => r.map((v) => `"${v}"`).join(","))];
+    const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = filename; a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function printTable(title: string, headers: string[], rows: (string | number)[][]) {
+    const rowsHtml = rows.map((r) =>
+      `<tr>${r.map((v) => `<td style="padding:8px 12px;border-bottom:1px solid #e5e7eb">${v}</td>`).join("")}</tr>`
+    ).join("");
+    const w = window.open("", "_blank");
+    if (!w) return;
+    w.document.write(`<!DOCTYPE html><html><head><title>${title}</title>
+      <style>body{font-family:sans-serif;padding:24px}h2{margin-bottom:16px}
+      table{border-collapse:collapse;width:100%}th{background:#f3f4f6;padding:8px 12px;text-align:left;border-bottom:2px solid #d1d5db}
+      td{font-size:14px}@media print{button{display:none}}</style></head>
+      <body><h2>${title}</h2>
+      <table><thead><tr>${headers.map((h) => `<th>${h}</th>`).join("")}</tr></thead>
+      <tbody>${rowsHtml}</tbody></table>
+      <br/><button onclick="window.print()">Print</button></body></html>`);
+    w.document.close();
+  }
+
   async function deletePiRate(id: string) {
     if (!confirm("Delete this rate?")) return;
     setDeleting(id);
@@ -293,6 +318,24 @@ export default function IncentivesPage() {
               </select>
             </div>
             <Button variant="outline" onClick={() => loadPiRecords(piMonth, piYear)} className="text-sm">Load</Button>
+            {piSummary.length > 0 && (<>
+              <Button variant="outline" size="sm" className="text-sm"
+                onClick={() => exportCSV(
+                  `PI_${months[parseInt(piMonth)-1]}_${piYear}.csv`,
+                  ["Member Name","Member ID","Direct PI (PT)","Upline PI (PT)","Total PI (PT)"],
+                  piSummary.map((m) => [m.name, m.memberId, m.depth0.toFixed(2), (m.total - m.depth0).toFixed(2), m.total.toFixed(2)])
+                )}>
+                <Download className="w-4 h-4 mr-1.5" />CSV
+              </Button>
+              <Button variant="outline" size="sm" className="text-sm"
+                onClick={() => printTable(
+                  `PI Commissions — ${months[parseInt(piMonth)-1]} ${piYear}`,
+                  ["Member Name","Member ID","Direct PI (PT)","Upline PI (PT)","Total PI (PT)"],
+                  piSummary.map((m) => [m.name, m.memberId, m.depth0.toFixed(2), (m.total - m.depth0).toFixed(2), m.total.toFixed(2)])
+                )}>
+                <Printer className="w-4 h-4 mr-1.5" />Print
+              </Button>
+            </>)}
           </div>
 
           {piSummary.length === 0 ? (
@@ -406,6 +449,24 @@ export default function IncentivesPage() {
               </select>
             </div>
             <Button variant="outline" onClick={() => loadBiRecords(biMonth, biYear)} className="text-sm">Load</Button>
+            {biSummary.length > 0 && (<>
+              <Button variant="outline" size="sm" className="text-sm"
+                onClick={() => exportCSV(
+                  `BI_${months[parseInt(biMonth)-1]}_${biYear}.csv`,
+                  ["Member Name","Member ID","Total BI (₹)"],
+                  biSummary.map((m) => [m.name, m.memberId, m.total.toFixed(2)])
+                )}>
+                <Download className="w-4 h-4 mr-1.5" />CSV
+              </Button>
+              <Button variant="outline" size="sm" className="text-sm"
+                onClick={() => printTable(
+                  `BI Commissions — ${months[parseInt(biMonth)-1]} ${biYear}`,
+                  ["Member Name","Member ID","Total BI (₹)"],
+                  biSummary.map((m) => [m.name, m.memberId, `₹${m.total.toFixed(2)}`])
+                )}>
+                <Printer className="w-4 h-4 mr-1.5" />Print
+              </Button>
+            </>)}
           </div>
 
           {biSummary.length === 0 ? (
@@ -524,6 +585,24 @@ export default function IncentivesPage() {
               </select>
             </div>
             <Button variant="outline" onClick={() => loadCommissions(commMonth, commYear)} className="text-sm">Load</Button>
+            {commSummary.length > 0 && (<>
+              <Button variant="outline" size="sm" className="text-sm"
+                onClick={() => exportCSV(
+                  `Commissions_${months[parseInt(commMonth)-1]}_${commYear}.csv`,
+                  ["Member Name","Member ID","Business (₹)","PI (PT)","BI (₹)","Total (₹)"],
+                  commSummary.map((m) => [m.name, m.memberId, m.business.toFixed(2), m.pi.toFixed(2), m.bi.toFixed(2), m.total.toFixed(2)])
+                )}>
+                <Download className="w-4 h-4 mr-1.5" />CSV
+              </Button>
+              <Button variant="outline" size="sm" className="text-sm"
+                onClick={() => printTable(
+                  `All Commissions — ${months[parseInt(commMonth)-1]} ${commYear}`,
+                  ["Member Name","Member ID","Business (₹)","PI (PT)","BI (₹)","Total (₹)"],
+                  commSummary.map((m) => [m.name, m.memberId, `₹${m.business.toFixed(2)}`, `${m.pi.toFixed(2)} PT`, `₹${m.bi.toFixed(2)}`, `₹${m.total.toFixed(2)}`])
+                )}>
+                <Printer className="w-4 h-4 mr-1.5" />Print
+              </Button>
+            </>)}
           </div>
 
           {commissions.length === 0 ? (
