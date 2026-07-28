@@ -46,7 +46,7 @@ export async function POST() {
     const uplineChain: { id: string; sponsorId: string | null }[] = [];
     let curSponsorId: string | null = seller.sponsorId;
     while (curSponsorId) {
-      const upline = await prisma.user.findFirst({
+      const upline: { id: string; sponsorId: string | null } | null = await prisma.user.findFirst({
         where: { id: curSponsorId, deletedAt: null },
         select: { id: true, sponsorId: true },
       });
