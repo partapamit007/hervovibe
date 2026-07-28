@@ -47,6 +47,7 @@ export default function ProductsPage() {
       biRate: String(p.biRate ?? 1), biUpline: String(p.biUpline ?? 0.5),
       stock: String(p.stock ?? 0), lowStockAlert: String(p.lowStockAlert ?? 10),
     });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function cancelEdit() { setEditId(null); setForm(emptyForm); }
@@ -155,9 +156,11 @@ export default function ProductsPage() {
         </div>
       </div>
 
-      <Card className="mb-8">
+      <Card className={`mb-8 ${editId ? "ring-2 ring-blue-400" : ""}`}>
         <CardHeader>
-          <CardTitle className="text-base">{editId ? "Edit Product" : "Add New Product"}</CardTitle>
+          <CardTitle className="text-base flex items-center gap-2">
+            {editId ? <><Pencil className="w-4 h-4 text-blue-500" /> Editing Product</> : "Add New Product"}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {status === "success" && (
