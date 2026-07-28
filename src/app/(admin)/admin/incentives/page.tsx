@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, XCircle, TrendingUp, IndianRupee, Settings, Info, RefreshCw, Download, Printer } from "lucide-react";
+import { CheckCircle, XCircle, TrendingUp, IndianRupee, Settings, Info, RefreshCw, Download, Printer, ChevronDown, ChevronUp } from "lucide-react";
 
 const months = [
   "January","February","March","April","May","June",
@@ -17,6 +17,7 @@ interface CommissionRecord {
   id: string; type: string; amount: number; depth: number;
   month: number; year: number; fromMemberId: string;
   member: { name: string; memberId: string };
+  fromMember?: { name: string; memberId: string };
 }
 interface PiRate { id: string; month: number; year: number; ratePerPoint: number; }
 interface BiConfig { id: string; baseRate: number; }
@@ -67,6 +68,7 @@ export default function IncentivesPage() {
   const [status, setStatus]     = useState<"idle" | "success" | "error">("idle");
   const [statusMsg, setStatusMsg] = useState("");
   const [recalcLoading, setRecalcLoading] = useState(false);
+  const [expandedBiMember, setExpandedBiMember] = useState<string | null>(null);
 
   function showStatus(type: "success" | "error", msg: string) {
     setStatus(type); setStatusMsg(msg);
@@ -482,17 +484,50 @@ export default function IncentivesPage() {
                 <CardTitle className="text-base">BI Commissions — {months[parseInt(biMonth) - 1]} {biYear}</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-xs text-gray-500 mb-3">{biSummary.length} members earned BI</p>
+                <p className="text-xs text-gray-500 mb-3">{biSummary.length} members earned BI · click a member to see breakdown</p>
                 <div className="divide-y divide-gray-100">
-                  {biSummary.map((m) => (
-                    <div key={m.memberId} className="py-3 flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-semibold text-gray-900">{m.name}</p>
-                        <p className="text-xs text-gray-500">[{m.memberId}]</p>
+                  {biSummary.map((m) => {
+                    const isOpen = expandedBiMember === m.memberId;
+                    const records = biRecords.filter(r => r.member.memberId === m.memberId);
+                    return (
+                      <div key={m.memberId}>
+                        <button
+                          onClick={() => setExpandedBiMember(isOpen ? null : m.memberId)}
+                          className="w-full py-3 flex items-center justify-between hover:bg-gray-50 rounded px-1 text-left"
+                        >
+                          <div>
+                            <p className="text-sm font-semibold text-gray-900">{m.name}</p>
+                            <p className="text-xs text-gray-500">[{m.memberId}] · {records.length} record{records.length !== 1 ? "s" : ""}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-bold text-purple-700">₹{m.total.toFixed(2)}</span>
+                            {isOpen ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                          </div>
+                        </button>
+                        {isOpen && (
+                          <div className="mb-3 ml-2 border-l-2 border-purple-200 pl-3 space-y-1.5">
+                            {records.map((r) => (
+                              <div key={r.id} className="flex items-center justify-between text-xs bg-purple-50 rounded px-3 py-2">
+                                <div>
+                                  <span className="font-medium text-gray-800">
+                                    {r.depth === 0 ? "Own sale" : `L${r.depth} downline sale`}
+                                  </span>
+                                  <span className="text-gray-500 ml-2">
+                                    from {r.fromMember?.name ?? r.fromMemberId}
+                                    {r.fromMember && <span className="text-gray-400"> [{r.fromMember.memberId}]</span>}
+                                  </span>
+                                </div>
+                                <span className="font-bold text-purple-700">₹{r.amount.toFixed(2)}</span>
+                              </div>
+                            ))}
+                            <div className="flex justify-end text-xs font-bold text-purple-800 pt-1 pr-1">
+                              Total: ₹{m.total.toFixed(2)}
+                            </div>
+                          </div>
+                        )}
                       </div>
-                      <span className="text-sm font-bold text-purple-700">₹{m.total.toFixed(2)}</span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>

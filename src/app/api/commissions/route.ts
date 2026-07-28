@@ -25,6 +25,7 @@ export async function GET(req: NextRequest) {
     },
     include: {
       member: { select: { name: true, memberId: true } },
+      fromMember: { select: { name: true, memberId: true } },
     },
     orderBy: { createdAt: "desc" },
     take: 200,
