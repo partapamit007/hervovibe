@@ -375,7 +375,8 @@ export default function IncentivesPage() {
                           </div>
                         </button>
                         {isOpen && (
-                          <div className="mb-3 ml-2 border-l-2 border-green-200 pl-3 space-y-1.5">
+                          <div className="mb-3 ml-2 border-l-2 border-green-200 pl-3">
+                            <div className="space-y-1.5 max-h-[220px] overflow-y-auto pr-1">
                             {records.map((r) => (
                               <div key={r.id} className="flex items-center justify-between text-xs bg-green-50 rounded px-3 py-2">
                                 <div>
@@ -390,6 +391,7 @@ export default function IncentivesPage() {
                                 <span className="font-bold text-green-700">{r.amount.toFixed(2)} PT</span>
                               </div>
                             ))}
+                            </div>
                             <div className="flex justify-end text-xs font-bold text-green-800 pt-1 pr-1">
                               Total: {m.total.toFixed(2)} PT
                             </div>
@@ -535,7 +537,8 @@ export default function IncentivesPage() {
                           </div>
                         </button>
                         {isOpen && (
-                          <div className="mb-3 ml-2 border-l-2 border-purple-200 pl-3 space-y-1.5">
+                          <div className="mb-3 ml-2 border-l-2 border-purple-200 pl-3">
+                            <div className="space-y-1.5 max-h-[220px] overflow-y-auto pr-1">
                             {records.map((r) => (
                               <div key={r.id} className="flex items-center justify-between text-xs bg-purple-50 rounded px-3 py-2">
                                 <div>
@@ -550,6 +553,7 @@ export default function IncentivesPage() {
                                 <span className="font-bold text-purple-700">₹{r.amount.toFixed(2)}</span>
                               </div>
                             ))}
+                            </div>
                             <div className="flex justify-end text-xs font-bold text-purple-800 pt-1 pr-1">
                               Total: ₹{m.total.toFixed(2)}
                             </div>
