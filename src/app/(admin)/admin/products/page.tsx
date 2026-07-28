@@ -30,6 +30,7 @@ export default function ProductsPage() {
   const [stockAdjustId, setStockAdjustId] = useState<string | null>(null);
   const [stockAdjustVal, setStockAdjustVal] = useState("");
   const [stockSaving, setStockSaving] = useState(false);
+  const [search, setSearch] = useState("");
 
   useEffect(() => { load(); }, []);
 
@@ -109,8 +110,11 @@ export default function ProductsPage() {
   const biVal       = parseFloat(form.biRate)   || 0;
   const biUplineVal = parseFloat(form.biUpline) || 0;
 
-  const outOfStock  = products.filter(p => p.stock <= 0);
-  const lowStock    = products.filter(p => p.stock > 0 && p.stock <= p.lowStockAlert);
+  const outOfStock     = products.filter(p => p.stock <= 0);
+  const lowStock       = products.filter(p => p.stock > 0 && p.stock <= p.lowStockAlert);
+  const filteredProducts = search.trim()
+    ? products.filter(p => p.name.toLowerCase().includes(search.trim().toLowerCase()))
+    : products;
 
   return (
     <div className="max-w-3xl">
@@ -279,17 +283,28 @@ export default function ProductsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <Package className="w-4 h-4 text-green-600" />
-            Active Products ({products.length})
-          </CardTitle>
+          <div className="flex items-center justify-between gap-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Package className="w-4 h-4 text-green-600" />
+              Active Products ({products.length}{search.trim() && filteredProducts.length !== products.length ? ` · ${filteredProducts.length} shown` : ""})
+            </CardTitle>
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search products..."
+              className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 w-56"
+            />
+          </div>
         </CardHeader>
         <CardContent>
           {products.length === 0 ? (
             <p className="text-gray-400 text-sm text-center py-8">No products yet. Add one above.</p>
+          ) : filteredProducts.length === 0 ? (
+            <p className="text-gray-400 text-sm text-center py-8">No products match &quot;{search}&quot;</p>
           ) : (
             <div className="divide-y divide-gray-100">
-              {products.map((p) => {
+              {filteredProducts.map((p) => {
                 const stockStatus = p.stock <= 0 ? "out" : p.stock <= p.lowStockAlert ? "low" : "ok";
                 return (
                   <div key={p.id} className="py-4">
