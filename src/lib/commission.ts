@@ -64,21 +64,24 @@ export async function calculateCommissions(saleId: string) {
   // 1. Seller's 8% BUSINESS commission — always on fixed ₹1,800 base
   records.push({ ...base, memberId: sale.memberId, type: "BUSINESS", amount: COMM_BASE * 0.08, depth: 0 });
 
-  // 2. Seller's PI and BI = piRate% / biRate% of MRP per product per unit
+  // 2. Seller's PI and BI — fixed ₹ per unit from product config (piRate / biRate)
+  //    Upline base — fixed ₹ per unit from product config (piUpline / biUpline), L1 gets full, then halves
   let totalSellerPI = 0;
   let totalSellerBI = 0;
+  let totalUplinePI = 0;
+  let totalUplineBI = 0;
   const noItems = sale.saleItems.length === 0;
 
   for (const item of sale.saleItems) {
     const qty = item.quantity;
-    const mrp = item.mrpAtSale;
-    totalSellerPI += qty * mrp * ((item.product?.piRate ?? 10) / 100);
-    totalSellerBI += qty * mrp * ((item.product?.biRate ?? 1)  / 100);
+    totalSellerPI += qty * (item.product?.piRate   ?? 0);
+    totalSellerBI += qty * (item.product?.biRate   ?? 0);
+    totalUplinePI += qty * (item.product?.piUpline ?? 0);
+    totalUplineBI += qty * (item.product?.biUpline ?? 0);
   }
 
   if (noItems) {
     const globalBiRate = await getBiBaseRate();
-    totalSellerPI = sale.amount * 0.10;
     totalSellerBI = sale.amount * globalBiRate;
   }
 
@@ -100,15 +103,15 @@ export async function calculateCommissions(saleId: string) {
     curSponsorId = upline.sponsorId;
   }
 
-  // 4. PI and BI for upline — halving at each level
-  //    Depth 1 gets 50% of seller's amount, depth 2 gets 25%, depth 3 gets 12.5%, etc.
-  //    Formula: uplineAmount = totalSellerAmount × (0.5 ^ depth)
+  // 4. PI and BI for upline — L1 gets full piUpline/biUpline base, halves at each deeper level
+  //    L1: totalUplinePI × 1, L2: × 0.5, L3: × 0.25 ...
+  //    Formula: uplineAmount = totalUplineBase × (0.5 ^ (depth - 1))
   if (uplineChain.length > 0) {
     for (const [idx, u] of uplineChain.entries()) {
       const depth = idx + 1;
-      const halvingFactor = Math.pow(0.5, depth);
-      const uplinePIAmt = parseFloat((totalSellerPI * halvingFactor).toFixed(2));
-      const uplineBIAmt = parseFloat((totalSellerBI * halvingFactor).toFixed(2));
+      const halvingFactor = Math.pow(0.5, depth - 1);
+      const uplinePIAmt = parseFloat((totalUplinePI * halvingFactor).toFixed(2));
+      const uplineBIAmt = parseFloat((totalUplineBI * halvingFactor).toFixed(2));
       if (uplinePIAmt >= 0.01)
         records.push({ ...base, memberId: u.id, type: "PI", amount: uplinePIAmt, depth });
       if (uplineBIAmt >= 0.01)
