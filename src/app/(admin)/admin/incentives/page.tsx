@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, XCircle, TrendingUp, IndianRupee, Settings, Info } from "lucide-react";
+import { CheckCircle, XCircle, TrendingUp, IndianRupee, Settings, Info, RefreshCw } from "lucide-react";
 
 const months = [
   "January","February","March","April","May","June",
@@ -66,6 +66,7 @@ export default function IncentivesPage() {
 
   const [status, setStatus]     = useState<"idle" | "success" | "error">("idle");
   const [statusMsg, setStatusMsg] = useState("");
+  const [recalcLoading, setRecalcLoading] = useState(false);
 
   function showStatus(type: "success" | "error", msg: string) {
     setStatus(type); setStatusMsg(msg);
@@ -161,6 +162,25 @@ export default function IncentivesPage() {
     setRateLoading(false);
   }
 
+  async function handleRecalculateUpline() {
+    if (!confirm("This will delete all historical upline PI/BI records and recalculate them using the correct halving formula (50%→25%→12.5%...). Seller records are not affected. Continue?")) return;
+    setRecalcLoading(true);
+    try {
+      const res = await fetch("/api/admin/recalculate-upline", { method: "POST" });
+      const d = await res.json();
+      if (res.ok) {
+        showStatus("success", `Done. Deleted ${d.deleted} old records, created ${d.created} new records across ${d.salesProcessed} sales.`);
+        loadPiRecords(piMonth, piYear);
+        loadBiRecords(biMonth, biYear);
+      } else {
+        showStatus("error", d.error || "Recalculation failed");
+      }
+    } catch {
+      showStatus("error", "Network error during recalculation");
+    }
+    setRecalcLoading(false);
+  }
+
   async function deletePiRate(id: string) {
     if (!confirm("Delete this rate?")) return;
     setDeleting(id);
@@ -207,9 +227,21 @@ export default function IncentivesPage() {
 
   return (
     <div className="max-w-3xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Incentives</h1>
-        <p className="text-sm text-gray-500 mt-0.5">Auto-calculated PI &amp; BI from sales · Configure rates · View commissions</p>
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Incentives</h1>
+          <p className="text-sm text-gray-500 mt-0.5">Auto-calculated PI &amp; BI from sales · Configure rates · View commissions</p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleRecalculateUpline}
+          disabled={recalcLoading}
+          className="text-orange-600 border-orange-300 hover:bg-orange-50 shrink-0 mt-1"
+        >
+          <RefreshCw className={`w-4 h-4 mr-1.5 ${recalcLoading ? "animate-spin" : ""}`} />
+          {recalcLoading ? "Recalculating..." : "Recalculate Upline PI/BI"}
+        </Button>
       </div>
 
       <div className="flex border-b border-gray-200 mb-6 overflow-x-auto">
