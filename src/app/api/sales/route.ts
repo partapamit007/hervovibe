@@ -88,6 +88,21 @@ export async function POST(req: NextRequest) {
   return NextResponse.json(sale, { status: 201 });
 }
 
+async function getDownlineIds(sponsorId: string): Promise<string[]> {
+  const ids: string[] = [];
+  let level = [sponsorId];
+  while (level.length) {
+    const children = await prisma.user.findMany({
+      where: { sponsorId: { in: level }, deletedAt: null },
+      select: { id: true },
+    });
+    const childIds = children.map((c) => c.id);
+    ids.push(...childIds);
+    level = childIds;
+  }
+  return ids;
+}
+
 export async function GET(req: NextRequest) {
   const session = await auth();
   if (!session)
@@ -99,9 +114,20 @@ export async function GET(req: NextRequest) {
   const memberId = searchParams.get("memberId");
   const enteredById = searchParams.get("enteredById");
 
-  // Distributors can only see their own sales
-  const effectiveMemberId =
-    session.user.role === "DISTRIBUTOR" ? session.user.id : memberId;
+  let effectiveMemberId: string | null | undefined = memberId;
+
+  if (session.user.role === "DISTRIBUTOR") {
+    if (memberId && memberId !== session.user.id) {
+      // Allow only if the requested member is in this distributor's downline
+      const downlineIds = await getDownlineIds(session.user.id);
+      if (!downlineIds.includes(memberId)) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+      effectiveMemberId = memberId;
+    } else {
+      effectiveMemberId = session.user.id;
+    }
+  }
 
   const sales = await prisma.sale.findMany({
     where: {

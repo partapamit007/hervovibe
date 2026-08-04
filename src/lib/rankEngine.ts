@@ -17,6 +17,13 @@ const RANK_MIN_TEAM: Record<Rank, number> = {
   CENTENNIAL:    279936,
 };
 
+export async function resetAllRanks() {
+  await prisma.user.updateMany({
+    where: { role: "DISTRIBUTOR", deletedAt: null },
+    data: { rank: "DISTRIBUTOR" },
+  });
+}
+
 export async function runRankEngine(month: number, year: number) {
   const allUsers = await prisma.user.findMany({
     where: { role: "DISTRIBUTOR", deletedAt: null },
@@ -54,8 +61,16 @@ export async function runRankEngine(month: number, year: number) {
     return count;
   }
 
-  // Count only ACTIVE downline — members with ≥₹1,260 own sales this month.
-  // Rank promotion requires this count to meet the minimum, not just headcount.
+  // Count GREEN direct recruits only (immediate children with ≥₹1,260 sales).
+  // Used for BRONZE qualification — BRONZE requires 6 direct recruits, not 6 anywhere in tree.
+  function countGreenDirects(id: string): number {
+    return (children.get(id) ?? []).filter(
+      (childId) => (salesByMember.get(childId) ?? 0) >= 1260
+    ).length;
+  }
+
+  // Count ALL active downline — members anywhere in the tree with ≥₹1,260 own sales.
+  // Used for SILVER and above where total team size is what matters.
   function countGreenDownline(id: string): number {
     let count = 0;
     const queue = [...(children.get(id) ?? [])];
@@ -68,15 +83,18 @@ export async function runRankEngine(month: number, year: number) {
   }
 
   // Ranks are permanent — once achieved they are never taken away.
-  // Promotion requires BOTH: ≥ N active (GREEN, ≥₹1260) team members AND own sales ≥ ₹1260.
-  function calcPromotedRank(userId: string, currentRank: Rank, greenTeamSize: number): Rank {
+  // BRONZE: requires N green DIRECT recruits + own ≥₹1,260.
+  // SILVER+: requires N green total team + own ≥₹1,260.
+  function calcPromotedRank(userId: string, currentRank: Rank, greenDirects: number, greenTeamSize: number): Rank {
     const ownSales = salesByMember.get(userId) ?? 0;
     const currentIdx = RANK_ORDER.indexOf(currentRank);
     let promoted: Rank = currentRank; // never go below current
 
     for (let i = currentIdx + 1; i < RANK_ORDER.length; i++) {
       const r = RANK_ORDER[i];
-      if (greenTeamSize >= RANK_MIN_TEAM[r] && ownSales >= 1260) {
+      // BRONZE uses direct count; SILVER and above use total team count
+      const qualifyingCount = r === "BRONZE" ? greenDirects : greenTeamSize;
+      if (qualifyingCount >= RANK_MIN_TEAM[r] && ownSales >= 1260) {
         promoted = r;
       } else {
         break; // ranks are progressive — if this one fails, higher ones will too
@@ -90,8 +108,9 @@ export async function runRankEngine(month: number, year: number) {
 
   for (const user of allUsers) {
     const teamSize = countDownline(user.id);
+    const greenDirects = countGreenDirects(user.id);
     const greenTeamSize = countGreenDownline(user.id);
-    const newRank = calcPromotedRank(user.id, user.rank, greenTeamSize);
+    const newRank = calcPromotedRank(user.id, user.rank, greenDirects, greenTeamSize);
     if (newRank !== user.rank) {
       changes.push({ memberId: user.id, oldRank: user.rank, newRank, teamSize, greenTeamSize });
     }

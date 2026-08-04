@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, PlayCircle, CheckCircle, XCircle, ArrowUp, Lock } from "lucide-react";
+import { Trophy, PlayCircle, CheckCircle, XCircle, ArrowUp, Lock, RotateCcw } from "lucide-react";
 
 const RANK_ORDER = ["DISTRIBUTOR","BRONZE","SILVER","GOLDEN","DIAMOND","SUPER_DIAMOND","PLATINUM","CENTENNIAL"];
 const RANK_MIN_TEAM: Record<string, number> = {
@@ -55,6 +55,7 @@ export default function RanksPage() {
   const [month, setMonth] = useState(String(now.getMonth() + 1));
   const [year, setYear] = useState(String(now.getFullYear()));
   const [running, setRunning] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const [result, setResult] = useState<RunResult | null>(null);
   const [runError, setRunError] = useState("");
   const [history, setHistory] = useState<HistoryEntry[]>([]);
@@ -67,16 +68,19 @@ export default function RanksPage() {
     setHistory(Array.isArray(data) ? data : []);
   }
 
-  async function handleRun() {
-    if (!confirm(`Run rank engine for ${months[parseInt(month) - 1]} ${year}?\n\nThis will promote members who have met both:\n• Minimum team size for the next rank\n• ₹1,260+ own sales this month\n\nNo rank will be downgraded.`)) return;
-    setRunning(true);
+  async function handleRun(reset = false) {
+    const confirmMsg = reset
+      ? `RESET ALL RANKS + Recalculate for ${months[parseInt(month) - 1]} ${year}?\n\n⚠️ This will set EVERY member back to DISTRIBUTOR, then re-promote based on current sales data.\n\nUse this to correct wrongly assigned ranks.`
+      : `Run rank engine for ${months[parseInt(month) - 1]} ${year}?\n\nThis will promote members who have met both:\n• 6 green direct recruits (BRONZE) or team size (SILVER+)\n• ₹1,260+ own sales this month\n\nNo rank will be downgraded.`;
+    if (!confirm(confirmMsg)) return;
+    if (reset) setResetting(true); else setRunning(true);
     setResult(null);
     setRunError("");
     try {
       const res = await fetch("/api/admin/rank-engine", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ month, year }),
+        body: JSON.stringify({ month, year, reset }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -88,6 +92,7 @@ export default function RanksPage() {
     } catch {
       setRunError("Network error");
     }
+    setResetting(false);
     setRunning(false);
   }
 
@@ -120,6 +125,7 @@ export default function RanksPage() {
                 <tr className="text-xs text-gray-500 border-b border-gray-100">
                   <th className="text-left pb-2 font-medium">Rank</th>
                   <th className="text-right pb-2 font-medium">Min Team</th>
+                  <th className="text-right pb-2 font-medium">Counted As</th>
                   <th className="text-right pb-2 font-medium">Own Sales/Month</th>
                   <th className="text-right pb-2 font-medium">Monthly Salary</th>
                 </tr>
@@ -133,7 +139,10 @@ export default function RanksPage() {
                     <td className="py-2 text-right text-gray-600">
                       {RANK_MIN_TEAM[r] === 0 ? "—" : RANK_MIN_TEAM[r].toLocaleString("en-IN")}
                     </td>
-                    <td className="py-2 text-right text-gray-600">₹1,260</td>
+                    <td className="py-2 text-right text-gray-500 text-xs">
+                      {r === "DISTRIBUTOR" ? "—" : r === "BRONZE" ? "Direct recruits" : "Total team"}
+                    </td>
+                    <td className="py-2 text-right text-gray-600">{r === "DISTRIBUTOR" ? "—" : "₹1,260"}</td>
                     <td className="py-2 text-right font-medium text-gray-800">{RANK_SALARY[r]}</td>
                   </tr>
                 ))}
@@ -169,10 +178,17 @@ export default function RanksPage() {
             </div>
           </div>
 
-          <Button onClick={handleRun} disabled={running} className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2">
-            <PlayCircle className="w-4 h-4" />
-            {running ? "Running..." : "Run Rank Engine"}
-          </Button>
+          <div className="flex gap-3 flex-wrap">
+            <Button onClick={() => handleRun(false)} disabled={running || resetting} className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2">
+              <PlayCircle className="w-4 h-4" />
+              {running ? "Running..." : "Run Rank Engine"}
+            </Button>
+            <Button onClick={() => handleRun(true)} disabled={running || resetting} variant="outline" className="border-red-300 text-red-600 hover:bg-red-50 flex items-center gap-2">
+              <RotateCcw className="w-4 h-4" />
+              {resetting ? "Resetting..." : "Reset All & Recalculate"}
+            </Button>
+          </div>
+          <p className="text-xs text-gray-400">Use &quot;Reset All&quot; only to correct wrongly assigned ranks — it wipes and re-derives all ranks from current sales data.</p>
 
           {runError && (
             <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3">
