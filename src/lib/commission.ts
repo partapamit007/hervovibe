@@ -27,7 +27,7 @@ async function getBiBaseRate(): Promise<number> {
   return config ? config.baseRate / 100 : 0.01;
 }
 
-const COMM_BASE = 1800; // business commission always on fixed ₹1,800 base, not actual sale amount
+const COMM_BASE = 1260; // business commission always on fixed ₹1,260 base, not actual sale amount
 
 export async function calculateCommissions(saleId: string) {
   // Idempotency guard — if commissions already exist for this sale, skip
@@ -81,8 +81,9 @@ export async function calculateCommissions(saleId: string) {
   }
 
   if (noItems) {
+    // No product items — use fixed ₹1,260 base with global BI rate
     const globalBiRate = await getBiBaseRate();
-    totalSellerBI = sale.amount * globalBiRate;
+    totalSellerBI = COMM_BASE * globalBiRate;
   }
 
   if (totalSellerPI >= 0.01)
