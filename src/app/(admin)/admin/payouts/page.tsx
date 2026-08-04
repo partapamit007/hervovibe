@@ -300,7 +300,7 @@ export default function PayoutsPage() {
                 {piRateSet && (
                   <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-4 py-3 mb-4 text-sm text-green-800">
                     <span>✓</span>
-                    <span>PI Rate for this month: <strong>₹{previewPiRate}/pt</strong> — PI column shows PT × rate</span>
+                    <span>PI Rate: <strong>₹{previewPiRate}/pt</strong> — PI Points × rate is included in Total</span>
                   </div>
                 )}
                 {preview.length === 0 ? (
@@ -316,7 +316,6 @@ export default function PayoutsPage() {
                           <th className="text-right pb-2 font-medium px-2">Commission</th>
                           <th className="text-right pb-2 font-medium px-2">PI Points</th>
                           <th className="text-right pb-2 font-medium px-2">BI Points</th>
-                          <th className="text-right pb-2 font-medium px-2">PI (₹)</th>
                           <th className="text-right pb-2 font-medium pl-2">Total</th>
                         </tr>
                       </thead>
@@ -353,9 +352,6 @@ export default function PayoutsPage() {
                               </td>
                               <td className="py-2.5 px-2 text-right text-xs text-purple-600 font-medium">
                                 {m.biPoints > 0 ? `${m.biPoints.toFixed(2)} PT` : <span className="text-gray-300">—</span>}
-                              </td>
-                              <td className="py-2.5 px-2 text-right text-xs text-green-700 font-medium">
-                                {piRateSet ? `₹${m.piAmount.toFixed(2)}` : <span className="text-amber-500">Rate not set</span>}
                               </td>
                               <td className="py-2.5 pl-2 text-right text-xs font-bold text-green-700">
                                 ₹{total.toLocaleString("en-IN", { maximumFractionDigits: 0 })}
