@@ -66,8 +66,16 @@ export async function GET(req: NextRequest) {
     return total;
   }
 
-  // BFS: count active downline members (≥₹1,260 own sales this month)
-  // Salary blocked if greenTeamSize < rank minimum — same condition as rank promotion.
+  // Count green DIRECT recruits (immediate children with ≥₹1,260 own sales).
+  // Used for BRONZE salary gate — mirrors the BRONZE rank promotion rule.
+  function countGreenDirects(id: string): number {
+    return (children.get(id) ?? []).filter(
+      (child) => (salesByMember.get(child) ?? 0) >= 1260
+    ).length;
+  }
+
+  // BFS: count active total team (≥₹1,260 own sales this month, all depths).
+  // Used for SILVER+ salary gate — mirrors the SILVER+ rank promotion rule.
   function countGreenDownline(id: string): number {
     let count = 0;
     const queue = [...(children.get(id) ?? [])];
@@ -114,7 +122,9 @@ export async function GET(req: NextRequest) {
   const result = members.map((m) => {
     const ownSales            = salesByMember.get(m.id) ?? 0;
     const ownQualifies        = ownSales >= 1260;
-    const greenTeamSize       = countGreenDownline(m.id);
+    // BRONZE salary: needs 6 green DIRECT recruits (same rule as rank promotion)
+    // SILVER+: needs N green total team members (BFS through all depths)
+    const greenTeamSize       = m.rank === "BRONZE" ? countGreenDirects(m.id) : countGreenDownline(m.id);
     const minTeamRequired     = RANK_MIN_TEAM[m.rank as keyof typeof RANK_MIN_TEAM] ?? 0;
     const salaryBlocked       = !ownQualifies || greenTeamSize < minTeamRequired;
     const salary              = salaryBlocked ? 0 : (RANK_SALARY[m.rank] ?? 0);
