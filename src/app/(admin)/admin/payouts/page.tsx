@@ -248,11 +248,13 @@ export default function PayoutsPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
             {[
-              { label: "Total Disbursed",  value: `₹${totalPaid.toLocaleString("en-IN")}`, color: "text-green-600"  },
-              { label: "Members Paid",     value: payouts.length.toString(),                color: "text-blue-600"   },
-              { label: "Total Salary",     value: `₹${payouts.reduce((s,p)=>s+p.salaryAmount,0).toLocaleString("en-IN")}`, color: "text-purple-600" },
+              { label: "Total Disbursed",  value: `₹${totalPaid.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`,                                                          color: "text-green-600"  },
+              { label: "Members Paid",     value: payouts.length.toString(),                                                                                                        color: "text-blue-600"   },
+              { label: "Total Salary",     value: `₹${payouts.reduce((s,p)=>s+p.salaryAmount,   0).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`,                        color: "text-purple-600" },
+              { label: "Total Commission", value: `₹${payouts.reduce((s,p)=>s+p.commissionAmount,0).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`,                       color: "text-blue-700"   },
+              { label: "Total PI",         value: `₹${payouts.reduce((s,p)=>s+p.piAmount,       0).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`,                        color: "text-orange-600" },
             ].map(s => (
               <div key={s.label} className="bg-white rounded-xl border border-gray-200 p-4">
                 <p className={`text-xl font-bold ${s.color}`}>{s.value}</p>
