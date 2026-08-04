@@ -148,6 +148,7 @@ model CommissionRecord {
   depth        Int
   createdAt    DateTime       @default(now())
 
+  @@unique([saleId, memberId, type, depth])
   @@map("commission_records")
 }
 

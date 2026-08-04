@@ -38,7 +38,8 @@ export async function GET(req: NextRequest) {
       fromMember: { select: { name: true, memberId: true } },
     },
     orderBy: { createdAt: "desc" },
-    take: 200,
+    take: parseInt(searchParams.get("limit") ?? "2000"),
+    skip: parseInt(searchParams.get("offset") ?? "0"),
   });
 
   return NextResponse.json(records);

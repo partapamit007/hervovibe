@@ -90,14 +90,19 @@ export async function calculateCommissions(saleId: string) {
   if (totalSellerBI >= 0.01)
     records.push({ ...base, memberId: sale.memberId, type: "BI", amount: parseFloat(totalSellerBI.toFixed(2)), depth: 0 });
 
-  // 3. Walk entire sponsor chain and collect upline
+  // 3. Walk entire sponsor chain in memory — one prefetch, zero N+1
+  const allUsers = await prisma.user.findMany({
+    where: { deletedAt: null },
+    select: { id: true, rank: true, sponsorId: true },
+  });
+  const userMap = new Map(allUsers.map((u) => [u.id, u]));
+
   const uplineChain: { id: string; rank: string; sponsorId: string | null }[] = [];
   let curSponsorId = sale.member.sponsorId;
-  while (curSponsorId) {
-    const upline = await prisma.user.findFirst({
-      where: { id: curSponsorId, deletedAt: null },
-      select: { id: true, rank: true, sponsorId: true },
-    });
+  const visited = new Set<string>();
+  while (curSponsorId && !visited.has(curSponsorId)) {
+    visited.add(curSponsorId);
+    const upline = userMap.get(curSponsorId);
     if (!upline) break;
     uplineChain.push(upline);
     curSponsorId = upline.sponsorId;

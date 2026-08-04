@@ -89,16 +89,24 @@ export async function POST(req: NextRequest) {
 }
 
 async function getDownlineIds(sponsorId: string): Promise<string[]> {
+  // Prefetch all active users once, then walk tree in memory
+  const all = await prisma.user.findMany({
+    where: { deletedAt: null },
+    select: { id: true, sponsorId: true },
+  });
+  const childMap = new Map<string, string[]>();
+  for (const u of all) {
+    if (u.sponsorId) {
+      if (!childMap.has(u.sponsorId)) childMap.set(u.sponsorId, []);
+      childMap.get(u.sponsorId)!.push(u.id);
+    }
+  }
   const ids: string[] = [];
-  let level = [sponsorId];
-  while (level.length) {
-    const children = await prisma.user.findMany({
-      where: { sponsorId: { in: level }, deletedAt: null },
-      select: { id: true },
-    });
-    const childIds = children.map((c) => c.id);
-    ids.push(...childIds);
-    level = childIds;
+  const queue = [...(childMap.get(sponsorId) ?? [])];
+  while (queue.length) {
+    const id = queue.shift()!;
+    ids.push(id);
+    queue.push(...(childMap.get(id) ?? []));
   }
   return ids;
 }
@@ -147,7 +155,8 @@ export async function GET(req: NextRequest) {
       saleItems: { include: { product: { select: { id: true, name: true, mrp: true } } } },
     },
     orderBy: { createdAt: "desc" },
-    take: 1000,
+    take: parseInt(searchParams.get("limit") ?? "1000"),
+    skip: parseInt(searchParams.get("offset") ?? "0"),
   });
   return NextResponse.json(sales);
 }
