@@ -487,7 +487,7 @@ export default function IncentivesPage() {
               <Button variant="outline" size="sm" className="text-sm"
                 onClick={() => exportCSV(
                   `BI_${months[parseInt(biMonth)-1]}_${biYear}.csv`,
-                  ["Member Name","Member ID","Total BI (₹)"],
+                  ["Member Name","Member ID","Total BI (PT)"],
                   biSummary.map((m) => [m.name, m.memberId, m.total.toFixed(2)])
                 )}>
                 <Download className="w-4 h-4 mr-1.5" />CSV
@@ -495,8 +495,8 @@ export default function IncentivesPage() {
               <Button variant="outline" size="sm" className="text-sm"
                 onClick={() => printTable(
                   `BI Commissions — ${months[parseInt(biMonth)-1]} ${biYear}`,
-                  ["Member Name","Member ID","Total BI (₹)"],
-                  biSummary.map((m) => [m.name, m.memberId, `₹${m.total.toFixed(2)}`])
+                  ["Member Name","Member ID","Total BI (PT)"],
+                  biSummary.map((m) => [m.name, m.memberId, `${m.total.toFixed(2)} PT`])
                 )}>
                 <Printer className="w-4 h-4 mr-1.5" />Print
               </Button>
@@ -532,7 +532,7 @@ export default function IncentivesPage() {
                             <p className="text-xs text-gray-500">[{m.memberId}] · {records.length} record{records.length !== 1 ? "s" : ""}</p>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="text-sm font-bold text-purple-700">₹{m.total.toFixed(2)}</span>
+                            <span className="text-sm font-bold text-purple-700">{m.total.toFixed(2)} PT</span>
                             {isOpen ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
                           </div>
                         </button>
@@ -550,12 +550,12 @@ export default function IncentivesPage() {
                                     {r.fromMember && <span className="text-gray-400"> [{r.fromMember.memberId}]</span>}
                                   </span>
                                 </div>
-                                <span className="font-bold text-purple-700">₹{r.amount.toFixed(2)}</span>
+                                <span className="font-bold text-purple-700">{r.amount.toFixed(2)} PT</span>
                               </div>
                             ))}
                             </div>
                             <div className="flex justify-end text-xs font-bold text-purple-800 pt-1 pr-1">
-                              Total: ₹{m.total.toFixed(2)}
+                              Total: {m.total.toFixed(2)} PT
                             </div>
                           </div>
                         )}
@@ -658,7 +658,7 @@ export default function IncentivesPage() {
               <Button variant="outline" size="sm" className="text-sm"
                 onClick={() => exportCSV(
                   `Commissions_${months[parseInt(commMonth)-1]}_${commYear}.csv`,
-                  ["Member Name","Member ID","Business (₹)","PI (PT)","BI (₹)","Total (₹)"],
+                  ["Member Name","Member ID","Business (₹)","PI (PT)","BI (PT)","Total (₹)"],
                   commSummary.map((m) => [m.name, m.memberId, m.business.toFixed(2), m.pi.toFixed(2), m.bi.toFixed(2), m.total.toFixed(2)])
                 )}>
                 <Download className="w-4 h-4 mr-1.5" />CSV
@@ -666,8 +666,8 @@ export default function IncentivesPage() {
               <Button variant="outline" size="sm" className="text-sm"
                 onClick={() => printTable(
                   `All Commissions — ${months[parseInt(commMonth)-1]} ${commYear}`,
-                  ["Member Name","Member ID","Business (₹)","PI (PT)","BI (₹)","Total (₹)"],
-                  commSummary.map((m) => [m.name, m.memberId, `₹${m.business.toFixed(2)}`, `${m.pi.toFixed(2)} PT`, `₹${m.bi.toFixed(2)}`, `₹${m.total.toFixed(2)}`])
+                  ["Member Name","Member ID","Business (₹)","PI (PT)","BI (PT)","Total (₹)"],
+                  commSummary.map((m) => [m.name, m.memberId, `₹${m.business.toFixed(2)}`, `${m.pi.toFixed(2)} PT`, `${m.bi.toFixed(2)} PT`, `₹${m.total.toFixed(2)}`])
                 )}>
                 <Printer className="w-4 h-4 mr-1.5" />Print
               </Button>
@@ -699,7 +699,7 @@ export default function IncentivesPage() {
                         <div className="flex gap-2 mt-1.5 flex-wrap">
                           {m.business > 0 && <Badge className="text-xs bg-blue-100 text-blue-700">Business ₹{m.business.toFixed(2)}</Badge>}
                           {m.pi > 0 && <Badge className="text-xs bg-green-100 text-green-700">PI {m.pi.toFixed(2)} PT</Badge>}
-                          {m.bi > 0 && <Badge className="text-xs bg-purple-100 text-purple-700">BI ₹{m.bi.toFixed(2)}</Badge>}
+                          {m.bi > 0 && <Badge className="text-xs bg-purple-100 text-purple-700">BI {m.bi.toFixed(2)} PT</Badge>}
                         </div>
                       </div>
                     ))}
