@@ -140,7 +140,7 @@ export default function RanksPage() {
                       {RANK_MIN_TEAM[r] === 0 ? "—" : RANK_MIN_TEAM[r].toLocaleString("en-IN")}
                     </td>
                     <td className="py-2 text-right text-gray-500 text-xs">
-                      {r === "DISTRIBUTOR" ? "—" : r === "BRONZE" ? "Direct recruits (≥₹1,260)" : "Active team (≥₹1,260)"}
+                      {r === "DISTRIBUTOR" ? "—" : r === "BRONZE" ? "6 directs, total ≥₹7,560" : "Active team (≥₹1,260 each)"}
                     </td>
                     <td className="py-2 text-right text-gray-600">{r === "DISTRIBUTOR" ? "—" : "₹1,260"}</td>
                     <td className="py-2 text-right font-medium text-gray-800">{RANK_SALARY[r]}</td>

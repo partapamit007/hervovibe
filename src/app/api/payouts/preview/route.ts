@@ -66,16 +66,21 @@ export async function GET(req: NextRequest) {
     return total;
   }
 
-  // Count green DIRECT recruits (immediate children with ≥₹1,260 own sales).
-  // Used for BRONZE salary gate — mirrors the BRONZE rank promotion rule.
-  function countGreenDirects(id: string): number {
-    return (children.get(id) ?? []).filter(
-      (child) => (salesByMember.get(child) ?? 0) >= 1260
-    ).length;
+  // Count ALL direct recruits (headcount, any sales).
+  function countDirects(id: string): number {
+    return (children.get(id) ?? []).length;
+  }
+
+  // Sum of ALL direct recruits' sales this month.
+  // BRONZE salary: 6 directs + this total ≥ ₹7,560 (individual breakdown doesn't matter).
+  function sumDirectSales(id: string): number {
+    return (children.get(id) ?? []).reduce(
+      (total, child) => total + (salesByMember.get(child) ?? 0), 0
+    );
   }
 
   // BFS: count active total team (≥₹1,260 own sales this month, all depths).
-  // Used for SILVER+ salary gate — mirrors the SILVER+ rank promotion rule.
+  // Used for SILVER+ salary gate.
   function countGreenDownline(id: string): number {
     let count = 0;
     const queue = [...(children.get(id) ?? [])];
@@ -122,11 +127,14 @@ export async function GET(req: NextRequest) {
   const result = members.map((m) => {
     const ownSales            = salesByMember.get(m.id) ?? 0;
     const ownQualifies        = ownSales >= 1260;
-    // BRONZE salary: needs 6 green DIRECT recruits (same rule as rank promotion)
-    // SILVER+: needs N green total team members (BFS through all depths)
-    const greenTeamSize       = m.rank === "BRONZE" ? countGreenDirects(m.id) : countGreenDownline(m.id);
+    // BRONZE: 6 directs (any sales) + combined direct sales ≥ ₹7,560
+    // SILVER+: N green total team members (each ≥ ₹1,260)
+    const directCount         = countDirects(m.id);
+    const directSalesSum      = sumDirectSales(m.id);
+    const greenTeamSize       = countGreenDownline(m.id);
     const minTeamRequired     = RANK_MIN_TEAM[m.rank as keyof typeof RANK_MIN_TEAM] ?? 0;
-    const salaryBlocked       = !ownQualifies || greenTeamSize < minTeamRequired;
+    const bronzeQualifies     = directCount >= 6 && directSalesSum >= 7560;
+    const salaryBlocked       = !ownQualifies || (m.rank === "BRONZE" ? !bronzeQualifies : greenTeamSize < minTeamRequired);
     const salary              = salaryBlocked ? 0 : (RANK_SALARY[m.rank] ?? 0);
     const comm                = commByMember.get(m.id) ?? { business: 0, piPoints: 0 };
     const piPoints            = parseFloat(comm.piPoints.toFixed(2));

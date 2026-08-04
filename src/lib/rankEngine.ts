@@ -61,12 +61,17 @@ export async function runRankEngine(month: number, year: number) {
     return count;
   }
 
-  // Count direct recruits (immediate children) who have ≥₹1,260 own sales this month.
-  // BRONZE requires 6 such green directs + own ≥₹1,260 sales.
-  function countGreenDirects(id: string): number {
-    return (children.get(id) ?? []).filter(
-      (child) => (salesByMember.get(child) ?? 0) >= 1260
-    ).length;
+  // Count ALL direct recruits (headcount, any sales including zero).
+  function countDirects(id: string): number {
+    return (children.get(id) ?? []).length;
+  }
+
+  // Sum of sales from ALL direct recruits this month (regardless of individual amounts).
+  // BRONZE needs this total ≥ ₹7,560 (6 × ₹1,260) — one person can contribute all of it.
+  function sumDirectSales(id: string): number {
+    return (children.get(id) ?? []).reduce(
+      (total, child) => total + (salesByMember.get(child) ?? 0), 0
+    );
   }
 
   // Count ALL active downline — members anywhere in the tree with ≥₹1,260 own sales.
@@ -83,36 +88,39 @@ export async function runRankEngine(month: number, year: number) {
   }
 
   // Ranks are permanent — once achieved they are never taken away.
-  // BRONZE: requires N green direct recruits (each ≥₹1,260) + own ≥₹1,260.
-  // SILVER+: requires N green total team members + own ≥₹1,260.
-  function calcPromotedRank(userId: string, currentRank: Rank, directCount: number, greenTeamSize: number): Rank {
+  // BRONZE: 6 direct recruits (any) + combined direct sales ≥ ₹7,560 + own ≥ ₹1,260.
+  // SILVER+: N green total team members (each ≥ ₹1,260) + own ≥ ₹1,260.
+  function calcPromotedRank(userId: string, currentRank: Rank): Rank {
     const ownSales = salesByMember.get(userId) ?? 0;
+    if (ownSales < 1260) return currentRank;
+
+    const directCount     = countDirects(userId);
+    const directSalesSum  = sumDirectSales(userId);
+    const greenTeamSize   = countGreenDownline(userId);
     const currentIdx = RANK_ORDER.indexOf(currentRank);
-    let promoted: Rank = currentRank; // never go below current
+    let promoted: Rank = currentRank;
 
     for (let i = currentIdx + 1; i < RANK_ORDER.length; i++) {
       const r = RANK_ORDER[i];
-      // BRONZE uses headcount of directs; SILVER+ uses green total team
-      const qualifyingCount = r === "BRONZE" ? directCount : greenTeamSize;
-      if (qualifyingCount >= RANK_MIN_TEAM[r] && ownSales >= 1260) {
-        promoted = r;
-      } else {
-        break;
-      }
+      const qualifies =
+        r === "BRONZE"
+          ? directCount >= 6 && directSalesSum >= 7560
+          : greenTeamSize >= RANK_MIN_TEAM[r];
+      if (qualifies) promoted = r;
+      else break;
     }
     return promoted;
   }
 
   // Only collect upgrades — no downgrades ever
-  const changes: { memberId: string; oldRank: Rank; newRank: Rank; teamSize: number; greenTeamSize: number }[] = [];
+  const changes: { memberId: string; oldRank: Rank; newRank: Rank; teamSize: number; directSalesSum: number }[] = [];
 
   for (const user of allUsers) {
-    const teamSize = countDownline(user.id);
-    const directCount = countGreenDirects(user.id);
-    const greenTeamSize = countGreenDownline(user.id);
-    const newRank = calcPromotedRank(user.id, user.rank, directCount, greenTeamSize);
+    const teamSize      = countDownline(user.id);
+    const directSalesSum = sumDirectSales(user.id);
+    const newRank       = calcPromotedRank(user.id, user.rank);
     if (newRank !== user.rank) {
-      changes.push({ memberId: user.id, oldRank: user.rank, newRank, teamSize, greenTeamSize });
+      changes.push({ memberId: user.id, oldRank: user.rank, newRank, teamSize, directSalesSum });
     }
   }
 
@@ -127,7 +135,9 @@ export async function runRankEngine(month: number, year: number) {
         newRank: c.newRank,
         month,
         year,
-        reason: `Promoted: ${c.greenTeamSize} active members (≥₹1260 each) of ${c.teamSize} total + own ₹1260 met`,
+        reason: c.newRank === "BRONZE"
+          ? `Promoted: 6 directs joined + direct team sales ₹${c.directSalesSum.toFixed(0)} (≥₹7560) + own ₹1260 met`
+          : `Promoted: team of ${c.teamSize} + own ₹1260 met`,
       })),
     });
   }
