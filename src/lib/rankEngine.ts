@@ -61,12 +61,10 @@ export async function runRankEngine(month: number, year: number) {
     return count;
   }
 
-  // Count GREEN direct recruits only (immediate children with ≥₹1,260 sales).
-  // Used for BRONZE qualification — BRONZE requires 6 direct recruits, not 6 anywhere in tree.
-  function countGreenDirects(id: string): number {
-    return (children.get(id) ?? []).filter(
-      (childId) => (salesByMember.get(childId) ?? 0) >= 1260
-    ).length;
+  // Count ALL direct recruits (immediate children), regardless of their sales.
+  // BRONZE requires 6 direct recruits joined — their individual sales don't matter for this rank.
+  function countDirects(id: string): number {
+    return (children.get(id) ?? []).length;
   }
 
   // Count ALL active downline — members anywhere in the tree with ≥₹1,260 own sales.
@@ -83,21 +81,21 @@ export async function runRankEngine(month: number, year: number) {
   }
 
   // Ranks are permanent — once achieved they are never taken away.
-  // BRONZE: requires N green DIRECT recruits + own ≥₹1,260.
-  // SILVER+: requires N green total team + own ≥₹1,260.
-  function calcPromotedRank(userId: string, currentRank: Rank, greenDirects: number, greenTeamSize: number): Rank {
+  // BRONZE: requires N direct recruits (any) + own ≥₹1,260.
+  // SILVER+: requires N green total team members + own ≥₹1,260.
+  function calcPromotedRank(userId: string, currentRank: Rank, directCount: number, greenTeamSize: number): Rank {
     const ownSales = salesByMember.get(userId) ?? 0;
     const currentIdx = RANK_ORDER.indexOf(currentRank);
     let promoted: Rank = currentRank; // never go below current
 
     for (let i = currentIdx + 1; i < RANK_ORDER.length; i++) {
       const r = RANK_ORDER[i];
-      // BRONZE uses direct count; SILVER and above use total team count
-      const qualifyingCount = r === "BRONZE" ? greenDirects : greenTeamSize;
+      // BRONZE uses headcount of directs; SILVER+ uses green total team
+      const qualifyingCount = r === "BRONZE" ? directCount : greenTeamSize;
       if (qualifyingCount >= RANK_MIN_TEAM[r] && ownSales >= 1260) {
         promoted = r;
       } else {
-        break; // ranks are progressive — if this one fails, higher ones will too
+        break;
       }
     }
     return promoted;
@@ -108,9 +106,9 @@ export async function runRankEngine(month: number, year: number) {
 
   for (const user of allUsers) {
     const teamSize = countDownline(user.id);
-    const greenDirects = countGreenDirects(user.id);
+    const directCount = countDirects(user.id);
     const greenTeamSize = countGreenDownline(user.id);
-    const newRank = calcPromotedRank(user.id, user.rank, greenDirects, greenTeamSize);
+    const newRank = calcPromotedRank(user.id, user.rank, directCount, greenTeamSize);
     if (newRank !== user.rank) {
       changes.push({ memberId: user.id, oldRank: user.rank, newRank, teamSize, greenTeamSize });
     }
