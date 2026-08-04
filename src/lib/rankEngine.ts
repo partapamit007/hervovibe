@@ -61,10 +61,12 @@ export async function runRankEngine(month: number, year: number) {
     return count;
   }
 
-  // Count ALL direct recruits (immediate children), regardless of their sales.
-  // BRONZE requires 6 direct recruits joined — their individual sales don't matter for this rank.
-  function countDirects(id: string): number {
-    return (children.get(id) ?? []).length;
+  // Count direct recruits (immediate children) who have ≥₹1,260 own sales this month.
+  // BRONZE requires 6 such green directs + own ≥₹1,260 sales.
+  function countGreenDirects(id: string): number {
+    return (children.get(id) ?? []).filter(
+      (child) => (salesByMember.get(child) ?? 0) >= 1260
+    ).length;
   }
 
   // Count ALL active downline — members anywhere in the tree with ≥₹1,260 own sales.
@@ -81,7 +83,7 @@ export async function runRankEngine(month: number, year: number) {
   }
 
   // Ranks are permanent — once achieved they are never taken away.
-  // BRONZE: requires N direct recruits (any) + own ≥₹1,260.
+  // BRONZE: requires N green direct recruits (each ≥₹1,260) + own ≥₹1,260.
   // SILVER+: requires N green total team members + own ≥₹1,260.
   function calcPromotedRank(userId: string, currentRank: Rank, directCount: number, greenTeamSize: number): Rank {
     const ownSales = salesByMember.get(userId) ?? 0;
@@ -106,7 +108,7 @@ export async function runRankEngine(month: number, year: number) {
 
   for (const user of allUsers) {
     const teamSize = countDownline(user.id);
-    const directCount = countDirects(user.id);
+    const directCount = countGreenDirects(user.id);
     const greenTeamSize = countGreenDownline(user.id);
     const newRank = calcPromotedRank(user.id, user.rank, directCount, greenTeamSize);
     if (newRank !== user.rank) {
