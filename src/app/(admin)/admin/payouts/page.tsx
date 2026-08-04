@@ -279,11 +279,7 @@ export default function PayoutsPage() {
                     <span className="text-sm text-gray-500">
                       {preview.filter(m => !m.alreadyPaid).length} pending · ₹{previewTotal.toLocaleString("en-IN", { maximumFractionDigits: 0 })}
                     </span>
-                    <Button onClick={handleSaveAll} disabled={saving || preview.filter(m=>!m.alreadyPaid).length===0}
-                      className="bg-green-600 hover:bg-green-700 text-sm">
-                      {saving ? "Saving..." : "Release Payouts"}
-                    </Button>
-                    <Button variant="outline" onClick={() => setPreview(null)} className="text-sm">Cancel</Button>
+                    <Button variant="outline" onClick={() => setPreview(null)} className="text-sm">Close</Button>
                   </div>
                 </div>
               </CardHeader>
