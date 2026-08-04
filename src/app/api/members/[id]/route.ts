@@ -19,7 +19,13 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
       sponsor: { select: { id: true, name: true, memberId: true } },
       downline: {
         where: { deletedAt: null },
-        select: { id: true, name: true, memberId: true, rank: true, status: true },
+        select: {
+          id: true, name: true, memberId: true, rank: true, status: true,
+          salesEntries: {
+            where: { deletedAt: null },
+            select: { month: true, year: true, amount: true },
+          },
+        },
       },
       salesEntries: {
         where: { deletedAt: null },

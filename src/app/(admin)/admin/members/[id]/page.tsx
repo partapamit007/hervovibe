@@ -323,25 +323,36 @@ export default function MemberDetailPage() {
         </CardHeader>
         <CardContent>
           {member.downline?.length === 0 ? (
-            <p className="text-gray-400 text-sm text-center py-4">
-              No downline members
-            </p>
+            <p className="text-gray-400 text-sm text-center py-4">No downline members</p>
           ) : (
-            <div className="space-y-2">
-              {member.downline?.map((d: any) => (
-                <div
-                  key={d.id}
-                  className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0"
-                >
-                  <div>
-                    <p className="text-sm font-medium text-gray-800">{d.name}</p>
-                    <p className="text-xs text-gray-500">{d.memberId}</p>
+            <div className="divide-y divide-gray-100">
+              {member.downline?.map((d: any) => {
+                const allTimeSales = (d.salesEntries ?? []).reduce((s: number, e: any) => s + e.amount, 0);
+                const now = new Date();
+                const thisMonth = (d.salesEntries ?? [])
+                  .filter((e: any) => e.month === now.getMonth() + 1 && e.year === now.getFullYear())
+                  .reduce((s: number, e: any) => s + e.amount, 0);
+                return (
+                  <div key={d.id} className="flex items-center justify-between py-2.5 cursor-pointer hover:bg-gray-50 px-1 rounded"
+                    onClick={() => window.location.href = `/admin/members/${d.id}`}>
+                    <div>
+                      <p className="text-sm font-medium text-gray-800">{d.name}</p>
+                      <p className="text-xs text-gray-400">{d.memberId}</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <p className="text-xs font-semibold text-gray-700">₹{allTimeSales.toLocaleString("en-IN")}</p>
+                        <p className="text-[10px] text-gray-400">
+                          {thisMonth > 0 ? `₹${thisMonth.toLocaleString("en-IN")} this month` : "No sales this month"}
+                        </p>
+                      </div>
+                      <Badge className={`text-xs ${rankColors[d.rank]}`}>
+                        {d.rank.replace(/_/g, " ")}
+                      </Badge>
+                    </div>
                   </div>
-                  <Badge className={`text-xs ${rankColors[d.rank]}`}>
-                    {d.rank.replace(/_/g, " ")}
-                  </Badge>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </CardContent>
