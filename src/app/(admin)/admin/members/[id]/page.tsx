@@ -102,7 +102,6 @@ export default function MemberDetailPage() {
   }
   const monthlySales = Object.entries(monthlySalesMap)
     .sort((a, b) => b[0].localeCompare(a[0]))
-    .slice(0, 6)
     .map(([key, amt]) => {
       const [y, m] = key.split("-");
       return { label: `${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][parseInt(m)-1]} ${y}`, amount: amt };
@@ -262,13 +261,15 @@ export default function MemberDetailPage() {
               <p className="text-xs text-gray-400">{totalSalesCount} sale{totalSalesCount !== 1 ? "s" : ""}</p>
             </div>
             {monthlySales.length > 0 && (
-              <div className="border-t border-gray-100 pt-2 space-y-1">
-                {monthlySales.map((m) => (
-                  <div key={m.label} className="flex justify-between text-xs">
-                    <span className="text-gray-500">{m.label}</span>
-                    <span className="font-medium text-gray-700">₹{m.amount.toLocaleString("en-IN")}</span>
-                  </div>
-                ))}
+              <div className="border-t border-gray-100 pt-2">
+                <div className="max-h-48 overflow-y-auto space-y-1 pr-1">
+                  {monthlySales.map((m) => (
+                    <div key={m.label} className="flex justify-between text-xs py-0.5">
+                      <span className="text-gray-500">{m.label}</span>
+                      <span className="font-medium text-gray-700">₹{m.amount.toLocaleString("en-IN")}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </CardContent>
