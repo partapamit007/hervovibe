@@ -28,7 +28,7 @@ interface PreviewMember {
   greenTeamSize: number; minTeamRequired: number;
   salaryBlocked: boolean; salary: number;
   businessCommission: number;
-  piPoints: number; piRatePerPoint: number | null; piAmount: number;
+  piPoints: number; biPoints: number; piRatePerPoint: number | null; piAmount: number;
   groupVolume: number; alreadyPaid: boolean;
 }
 
@@ -315,6 +315,7 @@ export default function PayoutsPage() {
                           <th className="text-right pb-2 font-medium px-2">Salary</th>
                           <th className="text-right pb-2 font-medium px-2">Commission</th>
                           <th className="text-right pb-2 font-medium px-2">PI Points</th>
+                          <th className="text-right pb-2 font-medium px-2">BI Points</th>
                           <th className="text-right pb-2 font-medium px-2">PI (₹)</th>
                           <th className="text-right pb-2 font-medium pl-2">Total</th>
                         </tr>
@@ -349,6 +350,9 @@ export default function PayoutsPage() {
                               </td>
                               <td className="py-2.5 px-2 text-right text-xs text-gray-600 font-medium">
                                 {m.piPoints.toFixed(2)} PT
+                              </td>
+                              <td className="py-2.5 px-2 text-right text-xs text-purple-600 font-medium">
+                                {m.biPoints > 0 ? `${m.biPoints.toFixed(2)} PT` : <span className="text-gray-300">—</span>}
                               </td>
                               <td className="py-2.5 px-2 text-right text-xs text-green-700 font-medium">
                                 {piRateSet ? `₹${m.piAmount.toFixed(2)}` : <span className="text-amber-500">Rate not set</span>}

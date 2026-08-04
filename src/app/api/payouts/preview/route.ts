@@ -108,13 +108,13 @@ export async function GET(req: NextRequest) {
   const piRateRecord = await prisma.piRate.findUnique({ where: { month_year: { month, year } } });
   const piRatePerPoint = piRateRecord?.ratePerPoint ?? null;
 
-  const commByMember = new Map<string, { business: number; piPoints: number }>();
+  const commByMember = new Map<string, { business: number; piPoints: number; biPoints: number }>();
   for (const c of commissions) {
-    if (!commByMember.has(c.memberId)) commByMember.set(c.memberId, { business: 0, piPoints: 0 });
+    if (!commByMember.has(c.memberId)) commByMember.set(c.memberId, { business: 0, piPoints: 0, biPoints: 0 });
     const rec = commByMember.get(c.memberId)!;
     if (c.type === "BUSINESS") rec.business  += c.amount;
     if (c.type === "PI")       rec.piPoints  += c.amount;
-    // BI excluded — paid separately via BI Release
+    if (c.type === "BI")       rec.biPoints  += c.amount;
   }
 
   // Already paid this month
@@ -136,8 +136,9 @@ export async function GET(req: NextRequest) {
     const bronzeQualifies     = directCount >= 6 && directSalesSum >= 7560;
     const salaryBlocked       = !ownQualifies || (m.rank === "BRONZE" ? !bronzeQualifies : greenTeamSize < minTeamRequired);
     const salary              = salaryBlocked ? 0 : (RANK_SALARY[m.rank] ?? 0);
-    const comm                = commByMember.get(m.id) ?? { business: 0, piPoints: 0 };
+    const comm                = commByMember.get(m.id) ?? { business: 0, piPoints: 0, biPoints: 0 };
     const piPoints            = parseFloat(comm.piPoints.toFixed(2));
+    const biPoints            = parseFloat(comm.biPoints.toFixed(2));
     const piAmount            = piRatePerPoint !== null ? parseFloat((piPoints * piRatePerPoint).toFixed(2)) : 0;
     const groupVolume         = ownSales + getDownlineSales(m.id);
 
@@ -154,12 +155,13 @@ export async function GET(req: NextRequest) {
       salary,
       businessCommission:   parseFloat(comm.business.toFixed(2)),
       piPoints,
+      biPoints,
       piRatePerPoint,
       piAmount,
       groupVolume:          parseFloat(groupVolume.toFixed(2)),
       alreadyPaid:          paidSet.has(m.id),
     };
-  }).filter((m) => m.salary > 0 || m.businessCommission > 0 || m.piPoints > 0);
+  }).filter((m) => m.salary > 0 || m.businessCommission > 0 || m.piPoints > 0 || m.biPoints > 0);
 
   return NextResponse.json({ members: result, piRateSet: piRatePerPoint !== null, piRatePerPoint });
 }
