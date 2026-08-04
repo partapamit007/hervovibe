@@ -8,6 +8,11 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
+
+  // DISTRIBUTOR can only view their own profile
+  if (session.user.role === "DISTRIBUTOR" && session.user.id !== id)
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
   const member = await prisma.user.findUnique({
     where: { id },
     include: {

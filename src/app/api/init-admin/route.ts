@@ -4,6 +4,9 @@ import bcrypt from "bcryptjs";
 
 // ONE-TIME USE: Creates admin account if it doesn't exist. Delete this file after initial setup.
 export async function GET(req: NextRequest) {
+  if (process.env.NODE_ENV === "production")
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+
   const { searchParams } = new URL(req.url);
   const secret = searchParams.get("secret");
   if (secret !== process.env.INIT_SECRET)

@@ -29,8 +29,14 @@ export async function GET(req: NextRequest) {
       if (monthRange.length > 120) break; // safety cap
     }
 
+    // Only include commissions from non-deleted sales
+    const activeSaleIds = await prisma.sale.findMany({
+      where: { deletedAt: null, OR: monthRange },
+      select: { id: true },
+    }).then((rows) => rows.map((r) => r.id));
+
     const records = await prisma.commissionRecord.findMany({
-      where: { type: "BI", OR: monthRange },
+      where: { type: "BI", OR: monthRange, saleId: { in: activeSaleIds } },
       select: { memberId: true, amount: true, member: { select: { name: true, memberId: true } } },
     });
 

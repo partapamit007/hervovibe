@@ -12,7 +12,7 @@ const RANK_MIN_TEAM: Record<string, number> = {
   DIAMOND: 1296, SUPER_DIAMOND: 7776, PLATINUM: 46656, CENTENNIAL: 279936,
 };
 const RANK_SALARY: Record<string, number> = {
-  DISTRIBUTOR: 0, BRONZE: 0, SILVER: 1000, GOLDEN: 5000,
+  DISTRIBUTOR: 0, BRONZE: 500, SILVER: 1000, GOLDEN: 5000,
   DIAMOND: 15000, SUPER_DIAMOND: 30000, PLATINUM: 75000, CENTENNIAL: 100000,
 };
 const rankColors: Record<string, string> = {
@@ -80,8 +80,7 @@ export default async function MemberDashboard() {
 
   const rank     = member?.rank ?? "DISTRIBUTOR";
   const ownSales = thisMonthSales._sum.amount ?? 0;
-  const qualifies = ownSales >= 1260;
-  const salary    = qualifies ? (RANK_SALARY[rank] ?? 0) : 0;
+  const ownQualifies = ownSales >= 1260;
   const idColor   = computeIdColor(colorSales, month, year, member?.joiningDate);
 
   // Direct downline with their ID colors
@@ -93,10 +92,15 @@ export default async function MemberDashboard() {
   const directIds = directDownline.map((d) => d.id);
   const downlineSalesRaw = directIds.length > 0
     ? await prisma.sale.findMany({
-        where: { memberId: { in: directIds }, OR: colorMonths },
+        where: { memberId: { in: directIds }, OR: colorMonths, deletedAt: null },
         select: { memberId: true, month: true, year: true, amount: true },
       })
     : [];
+
+  // Sum direct recruits' sales for this month — used for BRONZE salary gate
+  const directSalesThisMonth = downlineSalesRaw
+    .filter((s) => s.month === month && s.year === year)
+    .reduce((sum, s) => sum + s.amount, 0);
 
   const downlineWithColors = directDownline.map((d) => {
     const sales = downlineSalesRaw.filter((s) => s.memberId === d.id);
@@ -115,6 +119,15 @@ export default async function MemberDashboard() {
     greenTeamSize = greenRows.filter((r) => (r._sum.amount ?? 0) >= 1260).length;
   }
   const teamSize = allDownlineIds.length;
+
+  // Salary qualification: BRONZE needs own ≥₹1,260 + 6 directs + direct total ≥₹7,560
+  // SILVER+ needs own ≥₹1,260 + green team ≥ rank minimum
+  const qualifiesForSalary =
+    rank === "DISTRIBUTOR" ? false :
+    rank === "BRONZE"
+      ? ownQualifies && directDownline.length >= 6 && directSalesThisMonth >= 7560
+      : ownQualifies && greenTeamSize >= (RANK_MIN_TEAM[rank] ?? 0);
+  const salary = qualifiesForSalary ? (RANK_SALARY[rank] ?? 0) : 0;
 
   // Rank progress
   const rankIdx    = RANK_ORDER.indexOf(rank);
@@ -156,15 +169,19 @@ export default async function MemberDashboard() {
       {/* Salary target banner */}
       <div
         className={`rounded-xl px-4 py-3 mb-4 text-sm font-medium flex items-center justify-between ${
-          qualifies
+          qualifiesForSalary
             ? "bg-green-50 text-green-700 border border-green-200"
             : "bg-amber-50 text-amber-700 border border-amber-200"
         }`}
       >
         <span>
-          {qualifies
-            ? "Min. ₹1,260 sales met — salary active ✓"
-            : `₹${(1260 - ownSales).toLocaleString("en-IN")} more needed to unlock salary`}
+          {qualifiesForSalary
+            ? "Salary conditions met ✓"
+            : rank === "BRONZE"
+            ? `Need 6 directs + ₹7,560 combined team sales (current: ₹${directSalesThisMonth.toLocaleString("en-IN")})`
+            : !ownQualifies
+            ? `₹${(1260 - ownSales).toLocaleString("en-IN")} more needed to unlock salary`
+            : `Need ${(RANK_MIN_TEAM[rank] ?? 0)} active team members (${greenTeamSize} now)`}
         </span>
         {salary > 0 && (
           <span className="font-bold">₹{salary.toLocaleString("en-IN")}</span>
@@ -259,7 +276,7 @@ export default async function MemberDashboard() {
 
             {atRiskDirect.length > 0 && (
               <p className="text-xs text-amber-600 mt-3 bg-amber-50 px-3 py-2 rounded-lg">
-                ⚠ {atRiskDirect.length} member{atRiskDirect.length > 1 ? "s" : ""} haven't reached ₹1,260 this month — this blocks your salary.
+                ⚠ {atRiskDirect.length} direct member{atRiskDirect.length > 1 ? "s" : ""} at risk — combined direct sales may fall below ₹7,560 target.
               </p>
             )}
           </CardContent>

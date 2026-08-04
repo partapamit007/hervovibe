@@ -92,7 +92,23 @@ export default async function RankPage() {
 
   const rankIdx = rankOrder.indexOf(rank);
   const nextRankName = rankIdx < rankOrder.length - 1 ? rankOrder[rankIdx + 1] : null;
-  const nextRankMin = nextRankName ? { DISTRIBUTOR: 0, BRONZE: 6, SILVER: 36, GOLDEN: 216, DIAMOND: 1296, SUPER_DIAMOND: 7776, PLATINUM: 46656, CENTENNIAL: 279936 }[nextRankName] : null;
+  const RANK_MIN: Record<string, number> = { DISTRIBUTOR: 0, BRONZE: 6, SILVER: 36, GOLDEN: 216, DIAMOND: 1296, SUPER_DIAMOND: 7776, PLATINUM: 46656, CENTENNIAL: 279936 };
+  const nextRankMin = nextRankName ? RANK_MIN[nextRankName] : null;
+
+  // For BRONZE promotion: count direct recruits and their combined monthly sales
+  const directDownline = await prisma.user.findMany({
+    where: { sponsorId: userId, deletedAt: null },
+    select: { id: true },
+  });
+  const directIds = directDownline.map((d) => d.id);
+  const directSalesAgg = directIds.length > 0
+    ? await prisma.sale.aggregate({
+        where: { memberId: { in: directIds }, month, year, deletedAt: null },
+        _sum: { amount: true },
+      })
+    : { _sum: { amount: 0 } };
+  const directCount = directDownline.length;
+  const directSalesSum = directSalesAgg._sum.amount ?? 0;
 
   return (
     <div className="max-w-lg mx-auto">
@@ -151,18 +167,49 @@ export default async function RankPage() {
           <CardContent className="p-4">
             <p className="text-sm font-semibold text-gray-800 mb-3">To reach {nextRankName.replace(/_/g," ")}</p>
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex-1 mr-3">
-                  <span className="text-sm text-gray-600">Active team members</span>
-                  <p className="text-xs text-gray-400">Each must have ≥₹1,260 sales this month</p>
+              {nextRankName === "BRONZE" ? (
+                <>
+                  {/* BRONZE: headcount + combined sales */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 mr-3">
+                      <span className="text-sm text-gray-600">Direct recruits joined</span>
+                      <p className="text-xs text-gray-400">Any 6 members (individual sales don't matter)</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-gray-900">{directCount} / 6</span>
+                      <Badge className={`text-xs ${directCount >= 6 ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
+                        {directCount >= 6 ? "Met ✓" : `Need ${6 - directCount} more`}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 mr-3">
+                      <span className="text-sm text-gray-600">Combined direct team sales</span>
+                      <p className="text-xs text-gray-400">Total across all 6 directs this month</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-gray-900">₹{directSalesSum.toLocaleString("en-IN")} / ₹7,560</span>
+                      <Badge className={`text-xs ${directSalesSum >= 7560 ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
+                        {directSalesSum >= 7560 ? "Met ✓" : `₹${(7560 - directSalesSum).toLocaleString("en-IN")} short`}
+                      </Badge>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                /* SILVER+: green total team count */
+                <div className="flex items-center justify-between">
+                  <div className="flex-1 mr-3">
+                    <span className="text-sm text-gray-600">Active team members</span>
+                    <p className="text-xs text-gray-400">Each must have ≥₹1,260 sales this month</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-gray-900">{greenTeamSize} / {nextRankMin}</span>
+                    <Badge className={`text-xs ${greenTeamSize >= nextRankMin ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
+                      {greenTeamSize >= nextRankMin ? "Met ✓" : `Need ${nextRankMin - greenTeamSize} more`}
+                    </Badge>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-bold text-gray-900">{greenTeamSize} / {nextRankMin}</span>
-                  <Badge className={`text-xs ${greenTeamSize >= nextRankMin ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
-                    {greenTeamSize >= nextRankMin ? "Met ✓" : `Need ${nextRankMin - greenTeamSize} more`}
-                  </Badge>
-                </div>
-              </div>
+              )}
               <div className="flex items-center justify-between">
                 <div className="flex-1 mr-3">
                   <span className="text-sm text-gray-600">Your own sales this month</span>
@@ -176,7 +223,9 @@ export default async function RankPage() {
                 </div>
               </div>
             </div>
-            <p className="text-xs text-gray-400 mt-3 bg-gray-50 px-3 py-2 rounded-lg">Both conditions must be met in the same month. Total team: {teamSize} members ({teamSize - greenTeamSize} inactive this month).</p>
+            <p className="text-xs text-gray-400 mt-3 bg-gray-50 px-3 py-2 rounded-lg">
+              Both conditions must be met in the same month. Total team: {teamSize} members.
+            </p>
           </CardContent>
         </Card>
       )}

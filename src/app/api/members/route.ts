@@ -11,6 +11,10 @@ export async function GET(req: NextRequest) {
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  // DISTRIBUTOR cannot list members
+  if (session.user.role === "DISTRIBUTOR")
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
   const { searchParams } = new URL(req.url);
   const search    = searchParams.get("search")    || "";
   const rank      = searchParams.get("rank")      || "";

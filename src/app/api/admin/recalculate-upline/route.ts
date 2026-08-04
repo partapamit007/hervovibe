@@ -7,20 +7,17 @@ export async function POST() {
   if (!session || session.user.role !== "MASTER_ADMIN")
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  // Delete ALL PI and BI records — full rebuild with corrected fixed ₹/unit formula
-  const deleted = await prisma.commissionRecord.deleteMany({
-    where: { type: { in: ["PI", "BI"] } },
+  // Prefetch all users once — used to walk upline chain in memory (no N+1)
+  const allUsers = await prisma.user.findMany({
+    where: { deletedAt: null },
+    select: { id: true, sponsorId: true },
   });
+  const sponsorMap = new Map(allUsers.map((u) => [u.id, u.sponsorId]));
 
-  // Get all sales that have at least one sale item (needed for product rates)
   const sales = await prisma.sale.findMany({
     where: { deletedAt: null },
     select: {
-      id: true,
-      memberId: true,
-      month: true,
-      year: true,
-      amount: true,
+      id: true, memberId: true, month: true, year: true, amount: true,
       member: { select: { sponsorId: true } },
       saleItems: {
         include: { product: { select: { piRate: true, piUpline: true, biRate: true, biUpline: true } } },
@@ -36,12 +33,7 @@ export async function POST() {
   for (const sale of sales) {
     const base = { saleId: sale.id, fromMemberId: sale.memberId, month: sale.month, year: sale.year };
 
-    // Seller amounts: qty × fixed ₹/unit
-    let totalSellerPI = 0;
-    let totalSellerBI = 0;
-    let totalUplinePI = 0;
-    let totalUplineBI = 0;
-
+    let totalSellerPI = 0, totalSellerBI = 0, totalUplinePI = 0, totalUplineBI = 0;
     for (const item of sale.saleItems) {
       const qty = item.quantity;
       totalSellerPI += qty * (item.product?.piRate   ?? 0);
@@ -55,39 +47,29 @@ export async function POST() {
     if (totalSellerBI >= 0.01)
       newRecords.push({ ...base, memberId: sale.memberId, type: "BI", amount: parseFloat(totalSellerBI.toFixed(2)), depth: 0 });
 
-    // Upline chain
-    const uplineChain: { id: string; sponsorId: string | null }[] = [];
-    let curSponsorId: string | null = sale.member.sponsorId;
-    while (curSponsorId) {
-      const upline: { id: string; sponsorId: string | null } | null = await prisma.user.findFirst({
-        where: { id: curSponsorId, deletedAt: null },
-        select: { id: true, sponsorId: true },
-      });
-      if (!upline) break;
-      uplineChain.push(upline);
-      curSponsorId = upline.sponsorId;
-    }
-
-    // Every upline member gets the same fixed amount (no halving)
-    for (const [idx, u] of uplineChain.entries()) {
-      const depth = idx + 1;
-      const uplinePIAmt = parseFloat(totalUplinePI.toFixed(2));
-      const uplineBIAmt = parseFloat(totalUplineBI.toFixed(2));
-      if (uplinePIAmt >= 0.01) newRecords.push({ ...base, memberId: u.id, type: "PI", amount: uplinePIAmt, depth });
-      if (uplineBIAmt >= 0.01) newRecords.push({ ...base, memberId: u.id, type: "BI", amount: uplineBIAmt, depth });
+    // Walk upline chain in memory — no DB queries per level
+    let curId: string | null = sale.member.sponsorId;
+    let depth = 1;
+    const visited = new Set<string>();
+    while (curId && !visited.has(curId)) {
+      visited.add(curId);
+      if (totalUplinePI >= 0.01) newRecords.push({ ...base, memberId: curId, type: "PI", amount: parseFloat(totalUplinePI.toFixed(2)), depth });
+      if (totalUplineBI >= 0.01) newRecords.push({ ...base, memberId: curId, type: "BI", amount: parseFloat(totalUplineBI.toFixed(2)), depth });
+      curId = sponsorMap.get(curId) ?? null;
+      depth++;
     }
   }
 
-  let created = 0;
-  if (newRecords.length > 0) {
-    const result = await prisma.commissionRecord.createMany({ data: newRecords });
-    created = result.count;
-  }
+  // Atomic: delete old records and insert new ones in one transaction
+  const [deleted, insertResult] = await prisma.$transaction([
+    prisma.commissionRecord.deleteMany({ where: { type: { in: ["PI", "BI"] } } }),
+    prisma.commissionRecord.createMany({ data: newRecords }),
+  ]);
 
   return NextResponse.json({
     ok: true,
     deleted: deleted.count,
-    created,
+    created: insertResult.count,
     salesProcessed: sales.length,
   });
 }

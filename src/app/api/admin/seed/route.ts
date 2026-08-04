@@ -27,6 +27,9 @@ const LAST = [
 ];
 
 export async function POST(req: NextRequest) {
+  if (process.env.NODE_ENV === "production")
+    return NextResponse.json({ error: "Seed disabled in production" }, { status: 403 });
+
   const session = await auth();
   if (!session || session.user.role !== "MASTER_ADMIN")
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

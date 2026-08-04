@@ -17,8 +17,18 @@ export async function GET(req: NextRequest) {
   if (type && !validTypes.includes(type))
     return NextResponse.json({ error: "Invalid commission type" }, { status: 400 });
 
+  // Exclude commissions from soft-deleted sales
+  const activeSaleIds = await prisma.sale.findMany({
+    where: {
+      deletedAt: null,
+      ...(month && year ? { month: parseInt(month), year: parseInt(year) } : {}),
+    },
+    select: { id: true },
+  }).then((rows) => rows.map((r) => r.id));
+
   const records = await prisma.commissionRecord.findMany({
     where: {
+      saleId: { in: activeSaleIds },
       ...(memberId ? { memberId } : {}),
       ...(month && year ? { month: parseInt(month), year: parseInt(year) } : {}),
       ...(type ? { type: type as "BUSINESS" | "PI" | "BI" } : {}),
