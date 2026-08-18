@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Download, Trash2, Wallet, Sparkles, CheckCircle2, TrendingUp, Search } from "lucide-react";
+import { Download, Trash2, Wallet, Sparkles, CheckCircle2, TrendingUp, Search, ChevronDown, ChevronRight } from "lucide-react";
 
 const months    = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const monthsFull = ["January","February","March","April","May","June","July","August","September","October","November","December"];
@@ -66,6 +66,8 @@ export default function PayoutsPage() {
   const [saving,      setSaving]      = useState(false);
   const [saveMsg,     setSaveMsg]     = useState("");
   const [previewSearch, setPreviewSearch] = useState("");
+  const [expandedId,  setExpandedId]  = useState<string | null>(null);
+  const [breakdown,   setBreakdown]   = useState<Record<string, any>>({});
 
   // ── BI RELEASE TAB ────────────────────────────────────────────
   const [biFromMonth,  setBiFromMonth]  = useState(String(now.getMonth() + 1));
@@ -85,6 +87,8 @@ export default function PayoutsPage() {
     setPreview(null);
     setSaveMsg("");
     setPreviewSearch("");
+    setExpandedId(null);
+    setBreakdown({});
     // Auto-load preview whenever month/year changes
     setGenerating(true);
     fetch(`/api/payouts/preview?month=${filterMonth}&year=${filterYear}`)
@@ -153,6 +157,16 @@ export default function PayoutsPage() {
     setSaveMsg(`${saved} payouts created${skipped > 0 ? `, ${skipped} skipped (already paid)` : ""}.`);
     setPreview(null);
     loadPayouts();
+  }
+
+  async function toggleBreakdown(memberId: string) {
+    if (expandedId === memberId) { setExpandedId(null); return; }
+    setExpandedId(memberId);
+    if (!breakdown[memberId]) {
+      const res = await fetch(`/api/payouts/breakdown?memberId=${memberId}&month=${filterMonth}&year=${filterYear}`);
+      const data = await res.json();
+      setBreakdown(prev => ({ ...prev, [memberId]: data }));
+    }
   }
 
   async function handleDeletePayout(id: string) {
@@ -351,42 +365,115 @@ export default function PayoutsPage() {
                           m.name.toLowerCase().includes(previewSearch.toLowerCase()) ||
                           m.memberIdCode.toLowerCase().includes(previewSearch.toLowerCase())
                         ).map((m) => {
-                          const total = m.salary + m.businessCommission + m.piAmount;
+                          const total   = m.salary + m.businessCommission + m.piAmount;
+                          const isOpen  = expandedId === m.memberId;
+                          const bd      = breakdown[m.memberId];
                           return (
-                            <tr key={m.memberId} className={m.alreadyPaid ? "opacity-50 bg-green-50/40" : ""}>
-                              <td className="py-2.5 pr-3">
-                                <p className="font-medium text-gray-900 text-xs">{m.name}</p>
-                                <div className="flex items-center gap-1 mt-0.5">
-                                  <span className="text-xs text-gray-400">[{m.memberIdCode}]</span>
-                                  <Badge className={`text-xs py-0 ${rankColors[m.rank]}`}>{m.rank.replace(/_/g," ")}</Badge>
-                                  {m.alreadyPaid && <span className="text-xs text-green-600 font-medium">✓ recorded</span>}
-                                </div>
-                              </td>
-                              <td className="py-2.5 px-2 text-right">
-                                <span className={`text-xs font-medium ${m.qualifiesForSalary ? "text-green-600" : "text-red-500"}`}>
-                                  ₹{m.ownSales.toLocaleString("en-IN")}
-                                </span>
-                              </td>
-                              <td className="py-2.5 px-2 text-right text-xs font-medium">
-                                {m.salary > 0
-                                  ? <span className="text-gray-800">₹{m.salary.toLocaleString("en-IN")}</span>
-                                  : m.salaryBlocked
-                                    ? <span className="text-amber-500">Blocked</span>
-                                    : <span className="text-gray-400">—</span>}
-                              </td>
-                              <td className="py-2.5 px-2 text-right text-xs text-blue-700 font-medium">
-                                ₹{m.businessCommission.toFixed(2)}
-                              </td>
-                              <td className="py-2.5 px-2 text-right text-xs text-gray-600 font-medium">
-                                {m.piPoints.toFixed(2)} PT
-                              </td>
-                              <td className="py-2.5 px-2 text-right text-xs text-purple-600 font-medium">
-                                {m.biPoints > 0 ? `${m.biPoints.toFixed(2)} PT` : <span className="text-gray-300">—</span>}
-                              </td>
-                              <td className="py-2.5 pl-2 text-right text-xs font-bold text-green-700">
-                                ₹{total.toLocaleString("en-IN", { maximumFractionDigits: 0 })}
-                              </td>
-                            </tr>
+                            <>
+                              <tr
+                                key={m.memberId}
+                                onClick={() => toggleBreakdown(m.memberId)}
+                                className={`cursor-pointer hover:bg-gray-50/60 transition-colors ${m.alreadyPaid ? "opacity-50 bg-green-50/40" : ""}`}
+                              >
+                                <td className="py-2.5 pr-3 pl-1">
+                                  <div className="flex items-center gap-1.5">
+                                    {isOpen ? <ChevronDown className="w-3 h-3 text-gray-400 shrink-0" /> : <ChevronRight className="w-3 h-3 text-gray-400 shrink-0" />}
+                                    <div>
+                                      <p className="font-medium text-gray-900 text-xs">{m.name}</p>
+                                      <div className="flex items-center gap-1 mt-0.5">
+                                        <span className="text-xs text-gray-400">[{m.memberIdCode}]</span>
+                                        <Badge className={`text-xs py-0 ${rankColors[m.rank]}`}>{m.rank.replace(/_/g," ")}</Badge>
+                                        {m.alreadyPaid && <span className="text-xs text-green-600 font-medium">✓ recorded</span>}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="py-2.5 px-2 text-right">
+                                  <span className={`text-xs font-medium ${m.qualifiesForSalary ? "text-green-600" : "text-red-500"}`}>
+                                    ₹{m.ownSales.toLocaleString("en-IN")}
+                                  </span>
+                                </td>
+                                <td className="py-2.5 px-2 text-right text-xs font-medium">
+                                  {m.salary > 0
+                                    ? <span className="text-gray-800">₹{m.salary.toLocaleString("en-IN")}</span>
+                                    : m.salaryBlocked
+                                      ? <span className="text-amber-500">Blocked</span>
+                                      : <span className="text-gray-400">—</span>}
+                                </td>
+                                <td className="py-2.5 px-2 text-right text-xs text-blue-700 font-medium">
+                                  ₹{m.businessCommission.toFixed(2)}
+                                </td>
+                                <td className="py-2.5 px-2 text-right text-xs text-gray-600 font-medium">
+                                  {m.piPoints.toFixed(2)} PT
+                                </td>
+                                <td className="py-2.5 px-2 text-right text-xs text-purple-600 font-medium">
+                                  {m.biPoints > 0 ? `${m.biPoints.toFixed(2)} PT` : <span className="text-gray-300">—</span>}
+                                </td>
+                                <td className="py-2.5 pl-2 pr-1 text-right text-xs font-bold text-green-700">
+                                  ₹{total.toLocaleString("en-IN", { maximumFractionDigits: 0 })}
+                                </td>
+                              </tr>
+                              {isOpen && (
+                                <tr key={`${m.memberId}-bd`} className="bg-gray-50/80">
+                                  <td colSpan={7} className="px-6 py-3">
+                                    {!bd ? (
+                                      <p className="text-xs text-gray-400">Loading breakdown…</p>
+                                    ) : (
+                                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+                                        {/* Business Commission */}
+                                        <div>
+                                          <p className="font-semibold text-blue-700 mb-1.5">Business Commission — ₹{bd.totals?.business?.toFixed(2)}</p>
+                                          {bd.business?.length === 0
+                                            ? <p className="text-gray-400">No commission records</p>
+                                            : bd.business?.map((r: any, i: number) => (
+                                              <div key={i} className="flex justify-between gap-2 py-0.5 border-b border-gray-100">
+                                                <span className="text-gray-600 truncate">
+                                                  {r.depth === 0 ? "Own sale" : `L${r.depth}: ${r.fromName}`}
+                                                  {r.products?.length > 0 && <span className="text-gray-400 ml-1">({r.products.join(", ")})</span>}
+                                                </span>
+                                                <span className="font-medium text-blue-700 shrink-0">₹{r.amount}</span>
+                                              </div>
+                                            ))
+                                          }
+                                        </div>
+                                        {/* PI Points */}
+                                        <div>
+                                          <p className="font-semibold text-orange-600 mb-1.5">PI Points — {m.piPoints.toFixed(2)} PT</p>
+                                          {bd.pi?.length === 0
+                                            ? <p className="text-gray-400">No PI records</p>
+                                            : bd.pi?.map((r: any, i: number) => (
+                                              <div key={i} className="flex justify-between gap-2 py-0.5 border-b border-gray-100">
+                                                <span className="text-gray-600 truncate">
+                                                  {r.depth === 0 ? "Own sale" : `L${r.depth}: ${r.fromName}`}
+                                                  {r.products?.length > 0 && <span className="text-gray-400 ml-1">({r.products.join(", ")})</span>}
+                                                </span>
+                                                <span className="font-medium text-orange-600 shrink-0">{r.amount} pt</span>
+                                              </div>
+                                            ))
+                                          }
+                                        </div>
+                                        {/* BI Points */}
+                                        <div>
+                                          <p className="font-semibold text-purple-700 mb-1.5">BI Points — {m.biPoints.toFixed(2)} PT</p>
+                                          {bd.bi?.length === 0
+                                            ? <p className="text-gray-400">No BI records</p>
+                                            : bd.bi?.map((r: any, i: number) => (
+                                              <div key={i} className="flex justify-between gap-2 py-0.5 border-b border-gray-100">
+                                                <span className="text-gray-600 truncate">
+                                                  {r.depth === 0 ? "Own sale" : `L${r.depth}: ${r.fromName}`}
+                                                  {r.products?.length > 0 && <span className="text-gray-400 ml-1">({r.products.join(", ")})</span>}
+                                                </span>
+                                                <span className="font-medium text-purple-700 shrink-0">{r.amount} pt</span>
+                                              </div>
+                                            ))
+                                          }
+                                        </div>
+                                      </div>
+                                    )}
+                                  </td>
+                                </tr>
+                              )}
+                            </>
                           );
                         })}
                       </tbody>
