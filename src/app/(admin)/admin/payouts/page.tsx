@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Download, Trash2, Wallet, Sparkles, CheckCircle2, TrendingUp } from "lucide-react";
+import { Download, Trash2, Wallet, Sparkles, CheckCircle2, TrendingUp, Search } from "lucide-react";
 
 const months    = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const monthsFull = ["January","February","March","April","May","June","July","August","September","October","November","December"];
@@ -65,6 +65,7 @@ export default function PayoutsPage() {
   const [generating,  setGenerating]  = useState(false);
   const [saving,      setSaving]      = useState(false);
   const [saveMsg,     setSaveMsg]     = useState("");
+  const [previewSearch, setPreviewSearch] = useState("");
 
   // ── BI RELEASE TAB ────────────────────────────────────────────
   const [biFromMonth,  setBiFromMonth]  = useState(String(now.getMonth() + 1));
@@ -308,24 +309,38 @@ export default function PayoutsPage() {
                     <span>PI Rate: <strong>₹{previewPiRate}/pt</strong> — PI Points × rate is included in Total</span>
                   </div>
                 )}
+                <div className="relative mb-3">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={previewSearch}
+                    onChange={e => setPreviewSearch(e.target.value)}
+                    placeholder="Search by name or member ID…"
+                    className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  />
+                </div>
                 {preview.length === 0 ? (
                   <p className="text-sm text-gray-400 text-center py-6">No eligible members for this month.</p>
                 ) : (
-                  <div className="overflow-x-auto">
+                  <div className="overflow-x-auto overflow-y-auto max-h-[480px] rounded-lg border border-gray-100">
                     <table className="w-full text-sm">
-                      <thead>
+                      <thead className="sticky top-0 bg-white z-10 shadow-sm">
                         <tr className="text-xs text-gray-500 border-b border-gray-100">
-                          <th className="text-left pb-2 font-medium pr-3">Member</th>
-                          <th className="text-right pb-2 font-medium px-2">Own Sales</th>
-                          <th className="text-right pb-2 font-medium px-2">Salary</th>
-                          <th className="text-right pb-2 font-medium px-2">Commission</th>
-                          <th className="text-right pb-2 font-medium px-2">PI Points</th>
-                          <th className="text-right pb-2 font-medium px-2">BI Points</th>
-                          <th className="text-right pb-2 font-medium pl-2">Total</th>
+                          <th className="text-left pb-2 pt-2 font-medium pr-3 pl-1">Member</th>
+                          <th className="text-right pb-2 pt-2 font-medium px-2">Own Sales</th>
+                          <th className="text-right pb-2 pt-2 font-medium px-2">Salary</th>
+                          <th className="text-right pb-2 pt-2 font-medium px-2">Commission</th>
+                          <th className="text-right pb-2 pt-2 font-medium px-2">PI Points</th>
+                          <th className="text-right pb-2 pt-2 font-medium px-2">BI Points</th>
+                          <th className="text-right pb-2 pt-2 font-medium pl-2 pr-1">Total</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-50">
-                        {preview.map((m) => {
+                        {preview.filter(m =>
+                          !previewSearch ||
+                          m.name.toLowerCase().includes(previewSearch.toLowerCase()) ||
+                          m.memberIdCode.toLowerCase().includes(previewSearch.toLowerCase())
+                        ).map((m) => {
                           const total = m.salary + m.businessCommission + m.piAmount;
                           return (
                             <tr key={m.memberId} className={m.alreadyPaid ? "opacity-50 bg-green-50/40" : ""}>
