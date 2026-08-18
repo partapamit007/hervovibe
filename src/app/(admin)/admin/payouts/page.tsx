@@ -84,6 +84,16 @@ export default function PayoutsPage() {
     loadPayouts();
     setPreview(null);
     setSaveMsg("");
+    setPreviewSearch("");
+    // Auto-load preview whenever month/year changes
+    setGenerating(true);
+    fetch(`/api/payouts/preview?month=${filterMonth}&year=${filterYear}`)
+      .then(r => r.json())
+      .then(data => {
+        setPreview(data.members ?? []);
+        setPreviewPiRate(data.piRatePerPoint ?? null);
+      })
+      .finally(() => setGenerating(false));
   }, [filterMonth, filterYear]);
 
   useEffect(() => {
@@ -243,7 +253,7 @@ export default function PayoutsPage() {
               <Button onClick={handleGenerate} disabled={generating}
                 className="bg-green-600 hover:bg-green-700 flex items-center gap-1.5 text-sm">
                 <Sparkles className="w-4 h-4" />
-                {generating ? "Calculating..." : "Generate Payouts"}
+                {generating ? "Calculating..." : "Refresh"}
               </Button>
             </div>
           </div>
