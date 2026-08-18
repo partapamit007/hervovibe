@@ -280,6 +280,15 @@ export default function PayoutsPage() {
                       {preview.filter(m => !m.alreadyPaid).length} pending · ₹{previewTotal.toLocaleString("en-IN", { maximumFractionDigits: 0 })}
                     </span>
                     <Button variant="outline" onClick={() => setPreview(null)} className="text-sm">Close</Button>
+                    {preview.some(m => !m.alreadyPaid) && (
+                      <Button
+                        onClick={handleSaveAll}
+                        disabled={saving}
+                        className="bg-green-600 hover:bg-green-700 text-white text-sm flex items-center gap-1.5">
+                        <Wallet className="w-4 h-4" />
+                        {saving ? "Saving..." : `Release ${preview.filter(m => !m.alreadyPaid).length} Payouts`}
+                      </Button>
+                    )}
                   </div>
                 </div>
               </CardHeader>
@@ -319,13 +328,13 @@ export default function PayoutsPage() {
                         {preview.map((m) => {
                           const total = m.salary + m.businessCommission + m.piAmount;
                           return (
-                            <tr key={m.memberId} className={m.alreadyPaid ? "opacity-40" : ""}>
+                            <tr key={m.memberId} className={m.alreadyPaid ? "opacity-50 bg-green-50/40" : ""}>
                               <td className="py-2.5 pr-3">
                                 <p className="font-medium text-gray-900 text-xs">{m.name}</p>
                                 <div className="flex items-center gap-1 mt-0.5">
                                   <span className="text-xs text-gray-400">[{m.memberIdCode}]</span>
                                   <Badge className={`text-xs py-0 ${rankColors[m.rank]}`}>{m.rank.replace(/_/g," ")}</Badge>
-                                  {m.alreadyPaid && <span className="text-xs text-green-600">paid</span>}
+                                  {m.alreadyPaid && <span className="text-xs text-green-600 font-medium">✓ recorded</span>}
                                 </div>
                               </td>
                               <td className="py-2.5 px-2 text-right">
