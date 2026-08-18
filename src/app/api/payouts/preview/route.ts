@@ -71,14 +71,6 @@ export async function GET(req: NextRequest) {
     return (children.get(id) ?? []).length;
   }
 
-  // Sum of ALL direct recruits' sales this month.
-  // BRONZE salary: 6 directs + this total ≥ ₹7,560 (individual breakdown doesn't matter).
-  function sumDirectSales(id: string): number {
-    return (children.get(id) ?? []).reduce(
-      (total, child) => total + (salesByMember.get(child) ?? 0), 0
-    );
-  }
-
   // BFS: count active total team (≥₹1,260 own sales this month, all depths).
   // Used for SILVER+ salary gate.
   function countGreenDownline(id: string): number {
@@ -130,10 +122,10 @@ export async function GET(req: NextRequest) {
     // BRONZE: 6 directs (any sales) + combined direct sales ≥ ₹7,560
     // SILVER+: N green total team members (each ≥ ₹1,260)
     const directCount         = countDirects(m.id);
-    const directSalesSum      = sumDirectSales(m.id);
+    const downlineSalesSum    = getDownlineSales(m.id);
     const greenTeamSize       = countGreenDownline(m.id);
     const minTeamRequired     = RANK_MIN_TEAM[m.rank as keyof typeof RANK_MIN_TEAM] ?? 0;
-    const bronzeQualifies     = directCount >= 6 && directSalesSum >= 7560;
+    const bronzeQualifies     = directCount >= 6 && downlineSalesSum >= 7560;
     const salaryBlocked       = !ownQualifies || (m.rank === "BRONZE" ? !bronzeQualifies : greenTeamSize < minTeamRequired);
     const salary              = salaryBlocked ? 0 : (RANK_SALARY[m.rank] ?? 0);
     const comm                = commByMember.get(m.id) ?? { business: 0, piPoints: 0, biPoints: 0 };

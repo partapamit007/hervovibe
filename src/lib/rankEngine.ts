@@ -66,12 +66,17 @@ export async function runRankEngine(month: number, year: number) {
     return (children.get(id) ?? []).length;
   }
 
-  // Sum of sales from ALL direct recruits this month (regardless of individual amounts).
-  // BRONZE needs this total ≥ ₹7,560 (6 × ₹1,260) — one person can contribute all of it.
-  function sumDirectSales(id: string): number {
-    return (children.get(id) ?? []).reduce(
-      (total, child) => total + (salesByMember.get(child) ?? 0), 0
-    );
+  // Sum of sales from the ENTIRE downline (all levels) for the qualifying month.
+  // BRONZE uses this: total team sales ≥ ₹7,560 (6 × ₹1,260).
+  function sumDownlineSales(id: string): number {
+    let total = 0;
+    const queue = [...(children.get(id) ?? [])];
+    while (queue.length) {
+      const cur = queue.shift()!;
+      total += salesByMember.get(cur) ?? 0;
+      queue.push(...(children.get(cur) ?? []));
+    }
+    return total;
   }
 
   // Count ALL active downline — members anywhere in the tree with ≥₹1,260 own sales.
@@ -94,9 +99,9 @@ export async function runRankEngine(month: number, year: number) {
     const ownSales = salesByMember.get(userId) ?? 0;
     if (ownSales < 1260) return currentRank;
 
-    const directCount     = countDirects(userId);
-    const directSalesSum  = sumDirectSales(userId);
-    const greenTeamSize   = countGreenDownline(userId);
+    const directCount      = countDirects(userId);
+    const downlineSalesSum = sumDownlineSales(userId);
+    const greenTeamSize    = countGreenDownline(userId);
     const currentIdx = RANK_ORDER.indexOf(currentRank);
     let promoted: Rank = currentRank;
 
@@ -104,7 +109,7 @@ export async function runRankEngine(month: number, year: number) {
       const r = RANK_ORDER[i];
       const qualifies =
         r === "BRONZE"
-          ? directCount >= 6 && directSalesSum >= 7560
+          ? directCount >= 6 && downlineSalesSum >= 7560
           : greenTeamSize >= RANK_MIN_TEAM[r];
       if (qualifies) promoted = r;
       else break;
@@ -113,14 +118,14 @@ export async function runRankEngine(month: number, year: number) {
   }
 
   // Only collect upgrades — no downgrades ever
-  const changes: { memberId: string; oldRank: Rank; newRank: Rank; teamSize: number; directSalesSum: number }[] = [];
+  const changes: { memberId: string; oldRank: Rank; newRank: Rank; teamSize: number; downlineSalesSum: number }[] = [];
 
   for (const user of allUsers) {
-    const teamSize      = countDownline(user.id);
-    const directSalesSum = sumDirectSales(user.id);
-    const newRank       = calcPromotedRank(user.id, user.rank);
+    const teamSize         = countDownline(user.id);
+    const downlineSalesSum = sumDownlineSales(user.id);
+    const newRank          = calcPromotedRank(user.id, user.rank);
     if (newRank !== user.rank) {
-      changes.push({ memberId: user.id, oldRank: user.rank, newRank, teamSize, directSalesSum });
+      changes.push({ memberId: user.id, oldRank: user.rank, newRank, teamSize, downlineSalesSum });
     }
   }
 
@@ -136,7 +141,7 @@ export async function runRankEngine(month: number, year: number) {
         month,
         year,
         reason: c.newRank === "BRONZE"
-          ? `Promoted: 6 directs joined + direct team sales ₹${c.directSalesSum.toFixed(0)} (≥₹7560) + own ₹1260 met`
+          ? `Promoted: 6 directs joined + total team sales ₹${c.downlineSalesSum.toFixed(0)} (≥₹7560) + own ₹1260 met`
           : `Promoted: team of ${c.teamSize} + own ₹1260 met`,
       })),
     });
